@@ -1,0 +1,105 @@
+/* Scenes drawn at 1920x1080 and scaled: the racecard (runner list) and the home page (race list). */
+.stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; }
+/* ---------- racecard scene (1920x1080) ---------- */
+.card { position: absolute; inset: 0; background: var(--scene); transition: opacity .35s ease; }
+.layer { position: absolute; inset: 0; }
+/* transitions between Active scenes: the incoming layer animates over the outgoing one */
+.wipe-in { animation: wipeIn .8s cubic-bezier(.7,0,.25,1) both; }
+.wipebar { position: absolute; top: 0; bottom: 0; left: 0; width: 70px; z-index: 5; pointer-events: none;
+  background: linear-gradient(90deg, var(--yellow) 0 22px, transparent 22px 40px, #fff 40px 48px, transparent 48px); animation: wipeBar .8s cubic-bezier(.7,0,.25,1) both; }
+@keyframes wipeIn { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes wipeBar { from { transform: translateX(-70px); } to { transform: translateX(1920px); } }
+.slide-in { animation: slideIn .7s cubic-bezier(.65,0,.25,1) both; }
+.slide-out { animation: slideOut .7s cubic-bezier(.65,0,.25,1) both; }
+@keyframes slideIn { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes slideOut { from { transform: none; } to { transform: translateX(-35%); opacity: .2; } }
+.fade-in { animation: fadeIn .5s ease both; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.photo { position: absolute; left: 0; top: 0; bottom: 0; width: 1240px; background-size: cover; background-position: center; }
+/* no photo picked: a quiet navy gradient instead */
+.photo.ph { background: radial-gradient(70% 60% at 35% 45%, #1d2f9e 0%, #0b1a86 50%, var(--scene) 100%); }
+.fade { position: absolute; left: 640px; top: 0; bottom: 0; width: 620px; background: linear-gradient(90deg, rgba(0,21,125,0) 0%, rgba(0,21,125,.85) 70%, var(--scene) 100%); }
+.shade { position: absolute; left: 0; right: 0; bottom: 0; height: 420px; background: linear-gradient(0deg, rgba(0,0,0,.55), rgba(0,0,0,0)); }
+.logo { position: absolute; right: 40px; top: 30px; width: 240px; }
+.logo svg { width: 100%; height: auto; display: block; }
+.logo svg path { fill: #fff; }
+.title { position: absolute; left: 57px; bottom: 46px; display: grid; gap: 2px; color: #fff; text-shadow: 0 2px 14px rgba(0,0,0,.45); }
+.jpline { display: flex; align-items: center; gap: 16px; font: 600 38px var(--jp); }
+.pill { display: inline-flex; align-items: center; justify-content: center; font-family: var(--display); font-weight: 700; color: #fff; border-radius: 999px; line-height: 1; text-shadow: none; white-space: nowrap; }
+.title .pill { font-size: 26px; height: 36px; padding: 0 18px; }
+.rname { font-family: var(--display); font-weight: 700; font-size: 150px; line-height: .92; text-transform: uppercase; white-space: nowrap; letter-spacing: -.005em; }
+.sub { font-family: var(--display); font-weight: 600; font-size: 34px; line-height: 1.25; text-transform: uppercase; }
+
+.tbl { position: absolute; top: 108px; display: grid; gap: 0 26px; grid-auto-flow: column; }
+.colw { display: grid; align-content: start; }
+.th, .tr { display: grid; gap: 8px; align-items: center; }
+.th { height: 42px; font-family: var(--display); font-weight: 700; font-size: 21px; letter-spacing: .04em; color: #fff; }
+.th span { text-align: center; }
+.th .l { text-align: left; padding-left: 10px; }
+.tr { position: relative; height: 47.5px; padding: 4px 0; transition: transform .25s ease; }
+.tr > * { height: 100%; display: flex; align-items: center; }
+.box { justify-content: center; font-family: var(--display); font-weight: 700; font-size: 32px; }
+.no-plain { background: var(--scene); box-shadow: inset 0 0 0 3px #fff; color: #fff; }
+.band { gap: 10px; padding: 0 14px; font-family: var(--display); font-weight: 700; font-size: 31px; text-transform: none; color: #fff; white-space: nowrap; overflow: hidden; background: linear-gradient(90deg, var(--band) 75%, rgba(44,48,96,0)); }
+.band .nm { overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+.band.jk { font-weight: 500; }
+.fav { font-size: 18px; height: 24px; padding: 0 9px; flex: none; color: var(--scene); }
+.flag { width: 33px; height: 22px; flex: none; display: block; object-fit: cover; border-radius: 3px; box-shadow: 0 0 0 1px rgba(255,255,255,.35); }
+.tr.scr { opacity: .4; }
+.tr.scr .nm { text-decoration: line-through; text-decoration-thickness: 3px; }
+/* one continuous yellow bar from the start of HORSE to the end of JOCKEY (covers the gap); --hlx/--hlw set per row */
+.tr.hl::before, .tr.hl-out::before { content: ""; position: absolute; top: 4px; height: 48px; left: var(--hlx); width: var(--hlw); background: var(--yellow); transform-origin: left center; }
+.tr.hl .band { color: var(--navy); }
+.tr.hl .band > *, .tr.hl-out .band > * { position: relative; }
+/* while a horse is highlighted the other rows fade a little */
+.tbl.has-hl .tr:not(.hl) > * { opacity: .6; }
+.tbl.dim-in .tr:not(.hl) > * { animation: dimIn .4s ease both; }
+.tbl.moved .tr.hl-out > * { animation: dimIn .3s ease .45s both; } /* fade only after its bar has gone */
+.tbl.dim-out .tr:not(.hl-out) > * { animation: dimIn .4s ease reverse both; }
+@keyframes dimIn { from { opacity: 1; } to { opacity: .6; } }
+/* highlight IN: the bar grows left to right */
+.tr.hl.hl-anim::before { animation: hlBar .5s cubic-bezier(.65,0,.35,1) both; }
+.tr.hl.hl-anim .band { animation: hlInk .35s linear both; }
+.tr.hl.hl-anim .band.jk { animation-delay: .15s; }
+@keyframes hlBar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes hlInk { 0%, 30% { color: #fff; } 100% { color: var(--navy); } }
+/* highlight OUT (removed or moved to another horse): the reverse, bar shrinks right to left */
+.tr.hl-out::before { animation: hlBar .5s cubic-bezier(.65,0,.35,1) reverse both; }
+.tr.hl-out .band { animation: hlInk .35s linear reverse both; }
+.tr.hl-out .band:not(.jk) { animation-delay: .15s; }
+
+/* ---------- race list scene ---------- */
+.rl-card { position: absolute; inset: 0; background: var(--scene); transition: opacity .35s ease; }
+.rl-card .logo { right: 40px; }
+.rl-head { position: absolute; left: 80px; top: 70px; color: #fff; }
+.rl-head .d { font: 600 34px var(--display); letter-spacing: .06em; color: #C8CCF5; }
+.rl-head .c { font: 700 110px/1 var(--display); text-transform: uppercase; }
+.rl { position: absolute; left: 80px; right: 80px; top: 290px; display: grid; gap: 14px; }
+.rl-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+.rl-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,21,125,.92) 0%, rgba(0,21,125,.75) 60%, rgba(0,21,125,.55) 100%); }
+.rr { display: grid; grid-template-columns: 110px 150px minmax(0,1fr) 330px; gap: 10px; height: var(--rh, 78px); transition: transform .25s ease; }
+.rr > * { display: flex; align-items: center; gap: 18px; padding: 0 22px; background: linear-gradient(90deg, var(--band) 85%, rgba(44,48,96,.5)); color: #fff; font: 700 40px var(--display); white-space: nowrap; overflow: hidden; }
+.rr .r { justify-content: center; background: var(--scene); box-shadow: inset 0 0 0 3px #fff; }
+.rr .t { justify-content: center; font-variant-numeric: tabular-nums; }
+.rr .s { font-weight: 600; font-size: 34px; justify-content: flex-end; text-transform: uppercase; }
+.rr .pill { font-size: 26px; height: 36px; padding: 0 16px; }
+/* race highlight on the home page: same as the horse highlight (one yellow bar after the round box, others fade) */
+.rr { position: relative; }
+.rr.hl::before, .rr.hl-out::before { content: ""; position: absolute; top: 0; bottom: 0; left: var(--hlx); right: 0; background: var(--yellow); transform-origin: left center; }
+.rr.hl > *:not(.r) { color: var(--navy); }
+.rr.hl > * > *, .rr.hl-out > * > * { position: relative; }
+.rr.hl.hl-anim::before { animation: hlBar .5s cubic-bezier(.65,0,.35,1) both; }
+.rr.hl.hl-anim > *:not(.r) { animation: hlInk .35s linear both; }
+.rr.hl-out::before { animation: hlBar .5s cubic-bezier(.65,0,.35,1) reverse both; }
+.rr.hl-out > *:not(.r) { animation: hlInk .35s linear reverse both; }
+.rl.has-hl .rr:not(.hl) > * { opacity: .6; }
+.rl.dim-in .rr:not(.hl) > * { animation: dimIn .4s ease both; }
+.rl.moved .rr.hl-out > * { animation: dimIn .3s ease .45s both; } /* fade only after its bar has gone */
+.rl.dim-out .rr:not(.hl-out) > * { animation: dimIn .4s ease reverse both; }
+
+
+@media (prefers-reduced-motion: reduce) {
+  .card, .rl-card, .tr, .rr { transition: none; }
+  .wipe-in, .wipebar, .slide-in, .slide-out, .fade-in, .tr.hl.hl-anim::before, .tr.hl.hl-anim .band, .tr.hl-out::before, .tr.hl-out .band, .tbl .tr > *, .rr::before, .rr > * { animation: none !important; }
+  .rr.hl-out::before, .tr.hl-out::before { display: none; }
+}

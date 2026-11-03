@@ -1,0 +1,349 @@
+{
+  "$ref": "#/definitions/OtamasingBroadcastFile",
+  "definitions": {
+    "OtamasingBroadcastFile": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "const": 1,
+          "default": 1
+        },
+        "races": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "date": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "course": {
+                "type": "string",
+                "default": ""
+              },
+              "round": {
+                "type": "string",
+                "default": ""
+              },
+              "postTime": {
+                "type": "string",
+                "default": ""
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "jpName": {
+                "type": "string",
+                "default": ""
+              },
+              "subtitle": {
+                "type": "string",
+                "default": ""
+              },
+              "grade": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "G1",
+                      "G2",
+                      "G3",
+                      "L"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "jump": {
+                "type": "boolean",
+                "default": false
+              },
+              "class": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "2YO",
+                      "2YO_F",
+                      "3YO",
+                      "FM"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "surface": {
+                "type": "string",
+                "enum": [
+                  "Turf",
+                  "Dirt",
+                  "Jump"
+                ],
+                "default": "Turf"
+              },
+              "distanceM": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "highlight": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "style": {
+                "type": "object",
+                "properties": {
+                  "drawScheme": {
+                    "type": "string",
+                    "enum": [
+                      "jra",
+                      "us",
+                      "plain",
+                      "custom"
+                    ],
+                    "default": "jra"
+                  },
+                  "numberScheme": {
+                    "type": "string",
+                    "enum": [
+                      "jra",
+                      "us",
+                      "plain",
+                      "custom"
+                    ],
+                    "default": "plain"
+                  },
+                  "autoDraw": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "gradeStyle": {
+                    "type": "string",
+                    "enum": [
+                      "jra",
+                      "intl"
+                    ],
+                    "default": "jra"
+                  },
+                  "show": {
+                    "type": "object",
+                    "properties": {
+                      "draw": {
+                        "type": "boolean",
+                        "default": true
+                      },
+                      "grade": {
+                        "type": "boolean",
+                        "default": true
+                      },
+                      "class": {
+                        "type": "boolean",
+                        "default": true
+                      },
+                      "fav": {
+                        "type": "boolean",
+                        "default": true
+                      },
+                      "horseFlag": {
+                        "type": "boolean",
+                        "default": true
+                      },
+                      "jockeyFlag": {
+                        "type": "boolean",
+                        "default": true
+                      },
+                      "jpName": {
+                        "type": "boolean",
+                        "default": true
+                      }
+                    },
+                    "additionalProperties": false,
+                    "default": {}
+                  },
+                  "customColors": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "items": [
+                        {
+                          "type": "string",
+                          "pattern": "^#[0-9A-Fa-f]{6}$"
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^#[0-9A-Fa-f]{6}$"
+                        }
+                      ]
+                    },
+                    "propertyNames": {
+                      "pattern": "^\\d+$"
+                    },
+                    "default": {}
+                  }
+                },
+                "additionalProperties": false,
+                "default": {}
+              },
+              "runners": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "number": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 30
+                    },
+                    "draw": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 30
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null
+                    },
+                    "name": {
+                      "type": "string",
+                      "default": ""
+                    },
+                    "jockey": {
+                      "type": "string",
+                      "default": ""
+                    },
+                    "horseCountry": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^[A-Z]{2}$"
+                        },
+                        {
+                          "type": "string",
+                          "const": ""
+                        }
+                      ],
+                      "default": ""
+                    },
+                    "jockeyCountry": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^[A-Z]{2}$"
+                        },
+                        {
+                          "type": "string",
+                          "const": ""
+                        }
+                      ],
+                      "default": ""
+                    },
+                    "fav": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 30
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null
+                    },
+                    "scratched": {
+                      "type": "boolean",
+                      "default": false
+                    }
+                  },
+                  "required": [
+                    "number"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 2,
+                "maxItems": 30
+              }
+            },
+            "required": [
+              "date",
+              "name",
+              "runners"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "home": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "default": "Today's Races"
+            },
+            "subtitle": {
+              "type": "string",
+              "default": ""
+            },
+            "highlight": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null
+            }
+          },
+          "additionalProperties": false
+        },
+        "active": {
+          "type": "string"
+        },
+        "transition": {
+          "type": "string",
+          "enum": [
+            "wipe",
+            "slide",
+            "fade",
+            "none"
+          ]
+        }
+      },
+      "required": [
+        "races"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
