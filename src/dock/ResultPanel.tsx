@@ -2,7 +2,7 @@
  * Sub-tab "ผล" of the edit tab: enter the finishing position (or DNF / DQ / SCR), time and margin of each horse,
  * lock horses to the top of every page, and pick the page shown on screen (or let the pages take turns).
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { MAX_RUNNERS, type Race, type ResultView, type Runner } from "../lib/model";
 import { MAX_LOCKS, RESULT_ROWS, resultEntries, resultMark, setPageAuto, showPage, useResultPage } from "../lib/results";
 import { getData, updateRace } from "../lib/store";
@@ -18,6 +18,8 @@ const byFinish = (race: Race) => {
   return [...shown, ...race.runners.map((h) => h.number).filter((no) => !shown.includes(no))];
 };
 type Status = "" | "dnf" | "dq" | "scr";
+/** Fractions for margins, put into the margin field being typed in. */
+const FRACTIONS = ["½", "¼", "¾"] as const;
 const STATUS: [Status, string][] = [["", "–"], ["dnf", "DNF"], ["dq", "DQ"], ["scr", "SCR"]];
 
 export function ResultPanel({ race }: { race: Race }) {
@@ -44,6 +46,17 @@ export function ResultPanel({ race }: { race: Race }) {
     setRunner(no, st === "" ? { scratched: false, outcome: null } : st === "scr" ? { scratched: true, outcome: null, finish: null } : { scratched: false, outcome: st, finish: null });
   const setView = (fn: (v: ResultView) => ResultView) => updateRace(race.id, (r) => ({ ...r, result: fn(r.result) }));
 
+  // the margin field last typed in, so the fraction buttons know where to put their character
+  const marginRef = useRef<HTMLInputElement | null>(null);
+  const [marginNo, setMarginNo] = useState<number | null>(null);
+  const insertFraction = (ch: string) => {
+    const el = marginRef.current;
+    const h = race.runners.find((x) => x.number === marginNo);
+    if (!el || !h || !el.isConnected) return;
+    const start = el.selectionStart ?? h.margin.length, end = el.selectionEnd ?? start;
+    setRunner(h.number, { margin: h.margin.slice(0, start) + ch + h.margin.slice(end) });
+    requestAnimationFrame(() => { el.focus(); el.setSelectionRange(start + ch.length, start + ch.length); });
+  };
   const page = useResultPage(race);
   const shown = resultEntries(race);
   const lockedCount = page.locked.size;
@@ -76,6 +89,14 @@ export function ResultPanel({ race }: { race: Race }) {
 
       <Section title="ผลการแข่งขัน">
         <div className={cx(grid, "text-[11px] text-ink-muted")} aria-hidden="true"><span>ล็อค</span><span>อันดับ</span><span>สถานะ</span><span>ม้า</span><span>เวลา</span><span>ระยะห่าง</span></div>
+        <div className="flex flex-wrap items-center justify-end gap-1.5" role="group" aria-label="ใส่เศษในช่องระยะห่าง">
+          <span className="text-xs text-ink-muted">{marginNo != null ? `ใส่ในระยะห่างเบอร์ ${marginNo}:` : "คลิกช่องระยะห่างก่อน แล้วกด:"}</span>
+          {FRACTIONS.map((f) => (
+            // mousedown is cancelled so the margin field keeps its caret
+            <Button key={f} className="min-w-9 px-2 py-0.5 font-display text-[19px] font-bold" disabled={marginNo == null} aria-label={`ใส่ ${f}`}
+              onMouseDown={(e) => e.preventDefault()} onClick={() => insertFraction(f)}>{f}</Button>
+          ))}
+        </div>
         <div className="grid gap-1" data-testid="result-rows-edit">
           {rows.map((h) => {
             const mark = resultMark(h);
@@ -103,12 +124,13 @@ export function ResultPanel({ race }: { race: Race }) {
                   <span className={cx("truncate font-display text-[15px] font-bold uppercase", h.scratched && "line-through")}>{h.name || "–"}</span>
                 </span>
                 <input className={cx(inputClass, "px-1 disabled:opacity-30")} disabled={!!mark} aria-label={`เวลาเบอร์ ${h.number}`} placeholder="1:56.7" value={h.time} onChange={(e) => setRunner(h.number, { time: e.target.value })} />
-                <input className={cx(inputClass, "px-1 disabled:opacity-30")} disabled={!!mark} aria-label={`ระยะห่างเบอร์ ${h.number}`} placeholder="1¼" value={h.margin} onChange={(e) => setRunner(h.number, { margin: e.target.value })} />
+                <input className={cx(inputClass, "px-1 disabled:opacity-30", marginNo === h.number && "border-yellow!")} disabled={!!mark} aria-label={`ระยะห่างเบอร์ ${h.number}`} placeholder="1¼" value={h.margin}
+                  onFocus={(e) => { marginRef.current = e.currentTarget; setMarginNo(h.number); }} onChange={(e) => setRunner(h.number, { margin: e.target.value })} />
               </div>
             );
           })}
         </div>
-        <span className={hintClass}>สถานะ: DNF = วิ่งไม่จบ, DQ = ถูกตัดสิทธิ์, SCR = ถอนตัว (ตรงกับช่อง "ถอน" ในแท็บข้อมูล) ขึ้นต่อท้ายผู้เข้าเส้นชัยตามลำดับนี้ · ระยะห่างพิมพ์ได้อิสระ เช่น 1¼, ½, nk, hd, nse · ม้าที่ไม่มีอันดับและไม่มีสถานะจะไม่ขึ้นจอ · อันดับเท่ากัน (dead heat) ใส่เลขซ้ำได้</span>
+        <span className={hintClass}>สถานะ: DNF = วิ่งไม่จบ, DQ = ถูกตัดสิทธิ์, SCR = ถอนตัว (ตรงกับช่อง "ถอน" ในแท็บข้อมูล) ขึ้นต่อท้ายผู้เข้าเส้นชัยตามลำดับนี้ · ระยะห่างพิมพ์ได้อิสระ เช่น 1¼, ½, nk, hd, nse (ปุ่ม ½ ¼ ¾ ใส่เศษลงช่องที่คลิกไว้ล่าสุด) · ม้าที่ไม่มีอันดับและไม่มีสถานะจะไม่ขึ้นจอ · อันดับเท่ากัน (dead heat) ใส่เลขซ้ำได้</span>
         <div className="flex flex-wrap gap-1.5">
           <Button onClick={resort}>เรียงตามอันดับ</Button>
           <Button disabled={!race.result.locked.length} onClick={() => setView((v) => ({ ...v, locked: [] }))}>ปลดล็อคทั้งหมด</Button>
