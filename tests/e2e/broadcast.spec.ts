@@ -170,3 +170,39 @@ test("the blank page takes everything off the screen, with or without a transiti
     await expect(overlay.locator("[data-layer][data-active] [data-testid=race-list]")).toBeVisible();
   }
 });
+
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==", "base64");
+const png = (name: string) => ({ name, mimeType: "image/png", buffer: PNG });
+
+test("pictures: separate sets for the racecard and the result page, step by hand or change automatically", async ({ context }) => {
+  const { dock, overlay } = await open(context);
+  const shownKey = () => overlay.locator("[data-layer][data-active] [data-testid=photo]").last().getAttribute("data-key");
+  await dock.getByRole("button", { name: "แก้ไข 11R Sample Cup" }).click();
+  await dock.getByTestId("add-photos-card").setInputFiles([png("a.png"), png("b.png")]);
+  await expect(dock.getByTestId("thumbs-card").locator("[data-thumb]")).toHaveCount(2);
+  await dock.getByTestId("auto-card").click(); // manual
+  await dock.getByRole("button", { name: "แสดงรูปที่ 1" }).click();
+  await expect(dock.getByTestId("photo-pos-card")).toHaveText("1 / 2");
+  await expect.poll(shownKey).toBeTruthy();
+  const first = await shownKey();
+  await dock.getByRole("button", { name: "รูปถัดไป" }).click();
+  await expect(dock.getByTestId("photo-pos-card")).toHaveText("2 / 2");
+  await expect.poll(shownKey).not.toBe(first);
+  const second = await shownKey();
+  // automatic every 1 second
+  await dock.getByLabel("ทุกกี่วินาที").fill("1");
+  await dock.getByTestId("auto-card").click();
+  await expect.poll(shownKey, { timeout: 4000 }).toBe(first);
+  await expect.poll(shownKey, { timeout: 4000 }).toBe(second);
+
+  // the result page has its own pictures
+  await dock.getByRole("tab", { name: "ผล" }).click();
+  await dock.getByTestId("add-photos-result").setInputFiles([png("c.png")]);
+  await dock.getByRole("button", { name: "ตั้งหน้าผลเป็น Active" }).click();
+  await expect(overlay.locator("[data-layer][data-active] [data-testid=result]")).toBeVisible();
+  await expect.poll(shownKey).not.toBe(first);
+  expect([first, second]).not.toContain(await shownKey());
+  // removing it leaves the result page without a picture
+  await dock.getByRole("button", { name: "ลบรูปที่ 1" }).click();
+  await expect(overlay.locator("[data-layer][data-active] [data-testid=photo]")).toHaveCount(0);
+});

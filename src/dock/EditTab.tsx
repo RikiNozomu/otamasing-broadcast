@@ -5,13 +5,13 @@ import { CLASSES, exportFile, parseActive, resultOf, GRADES, MAX_RUNNERS, MIN_RU
 import { customPair, US } from "../lib/colors";
 import { downloadJson } from "../lib/download";
 import { cx } from "../lib/cx";
-import { bumpImage, update, updateRace, useData } from "../lib/store";
-import { deleteImage, putImage, raceImageKey } from "../lib/images";
+import { update, updateRace, useData } from "../lib/store";
 import { RacecardScene } from "../overlay/RacecardScene";
 import { ResultScene } from "../overlay/ResultScene";
 import { ResultPanel } from "./ResultPanel";
+import { PhotoSetEditor } from "./PhotoSetEditor";
 import { Stage } from "../overlay/Stage";
-import { Button, buttonClass } from "../components/Button";
+import { Button } from "../components/Button";
 import { Field, inputClass } from "../components/Field";
 import { Section, hintClass } from "../components/Section";
 import { Switch } from "../components/Switch";
@@ -38,7 +38,6 @@ export function EditTab({ editing, setEditing }: { editing: string | null; setEd
       const h = runners[i];
       return { ...r, runners, highlight: h.scratched && r.highlight === h.number ? null : r.highlight };
     });
-  const imgKey = raceImageKey(race.id);
   const S = race.style;
   const n = race.runners.length;
   const showCustom = S.drawScheme === "custom" || S.numberScheme === "custom";
@@ -91,13 +90,7 @@ export function EditTab({ editing, setEditing }: { editing: string | null; setEd
 
       {sub === "data" ? (
         <div className="grid gap-3" role="tabpanel" aria-labelledby="sub-data">
-          <Section title="รูปด้านซ้าย">
-            <div className="flex flex-wrap gap-1.5">
-              <label className={buttonClass("primary")} htmlFor="pic">เลือกรูป…</label>
-              <input type="file" id="pic" accept="image/*" hidden onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) { await putImage(imgKey, f); bumpImage(imgKey); } }} />
-              {d.images[imgKey] ? <Button onClick={async () => { await deleteImage(imgKey).catch(() => {}); update((x) => { const images = { ...x.images }; delete images[imgKey]; return { ...x, images }; }); }}>ไม่ใช้รูป</Button> : null}
-            </div>
-          </Section>
+          <PhotoSetEditor race={race} view="card" />
           <Section title="ข้อมูลรายการ">
             {text("name", "ชื่อรายการ")}
             {text("jpName", "ชื่อญี่ปุ่น")}
@@ -149,7 +142,10 @@ export function EditTab({ editing, setEditing }: { editing: string | null; setEd
           </Section>
         </div>
       ) : sub === "result" ? (
-        <ResultPanel race={race} />
+        <div className="grid gap-3">
+          <PhotoSetEditor race={race} view="result" />
+          <ResultPanel race={race} />
+        </div>
       ) : (
         <div className="grid gap-3" role="tabpanel" aria-labelledby="sub-style">
           <Section title="สีช่อง DRAW (ซอง)">

@@ -233,6 +233,79 @@
                 "additionalProperties": false,
                 "default": {}
               },
+              "photos": {
+                "type": "object",
+                "properties": {
+                  "card": {
+                    "type": "object",
+                    "properties": {
+                      "keys": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "default": []
+                      },
+                      "index": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "default": 0
+                      },
+                      "auto": {
+                        "type": "boolean",
+                        "default": true
+                      },
+                      "seconds": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 600,
+                        "default": 5
+                      },
+                      "since": {
+                        "type": "number",
+                        "default": 0
+                      }
+                    },
+                    "additionalProperties": false,
+                    "default": {}
+                  },
+                  "result": {
+                    "type": "object",
+                    "properties": {
+                      "keys": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "default": []
+                      },
+                      "index": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "default": 0
+                      },
+                      "auto": {
+                        "type": "boolean",
+                        "default": true
+                      },
+                      "seconds": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 600,
+                        "default": 5
+                      },
+                      "since": {
+                        "type": "number",
+                        "default": 0
+                      }
+                    },
+                    "additionalProperties": false,
+                    "default": {}
+                  }
+                },
+                "additionalProperties": false,
+                "default": {}
+              },
               "runners": {
                 "type": "array",
                 "items": {

@@ -79,7 +79,7 @@ export function ResultScene({ race, page }: { race: Race; page?: number }) {
 
   return (
     <div className="absolute inset-0 bg-scene" data-testid="result" data-race={race.id}>
-      <RacePhoto race={race} tableL={tableL} />
+      <RacePhoto photos={race.photos.result} tableL={tableL} />
       <div className="absolute grid content-start" style={{ right, top: 108, width: tableW }}>
         <div data-testid="table-head" className="grid h-[42px] items-center gap-2 text-center font-display text-[21px] font-bold tracking-[.04em] text-white" style={{ gridTemplateColumns: cols }}>
           <span>POS</span><span>NO.</span>{show.draw && <span>DRAW</span>}<span>HORSE</span><span>JOCKEY</span><span>TIME</span><span>MARGIN</span>

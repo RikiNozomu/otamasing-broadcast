@@ -76,6 +76,21 @@ export const ResultViewSchema = z.object({
 });
 export type ResultView = z.infer<typeof ResultViewSchema>;
 
+/**
+ * The left-hand pictures of one scene (racecard or result): keys of pictures in IndexedDB, in order.
+ * `index` is the picture shown at time `since`; with `auto` it moves on every `seconds` from there
+ * (every page works out the same picture from the clock, so nothing has to write while it runs).
+ */
+export const PhotoSetSchema = z.object({
+  keys: z.array(z.string()).default([]),
+  index: z.number().int().min(0).default(0),
+  auto: z.boolean().default(true),
+  seconds: z.number().min(1).max(600).default(5),
+  since: z.number().default(0),
+});
+export type PhotoSet = z.infer<typeof PhotoSetSchema>;
+export type PhotoView = "card" | "result";
+
 export const RaceSchema = z
   .object({
     id: z.string().min(1).optional(),
@@ -94,6 +109,8 @@ export const RaceSchema = z
     highlight: z.number().int().nullable().default(null),
     style: StyleSchema.default({}),
     result: ResultViewSchema.default({}),
+    /** Pictures are not in the file (they live in the browser), only their order and slideshow settings. */
+    photos: z.object({ card: PhotoSetSchema.default({}), result: PhotoSetSchema.default({}) }).default({}),
     runners: z.array(RunnerSchema).min(MIN_RUNNERS, `ม้าต้องมีอย่างน้อย ${MIN_RUNNERS} ตัว`).max(MAX_RUNNERS, `ม้าได้ไม่เกิน ${MAX_RUNNERS} ตัว`),
   })
   .superRefine((r, ctx) => {
@@ -152,6 +169,7 @@ export function activeExists(active: string, races: Pick<Race, "id">[]): boolean
 }
 
 export const newStyle = (): Style => StyleSchema.parse({});
+export const newPhotos = (): Race["photos"] => ({ card: PhotoSetSchema.parse({}), result: PhotoSetSchema.parse({}) });
 
 let counter = 0;
 export const newId = () => `r${Date.now().toString(36)}${(counter++).toString(36)}${Math.random().toString(36).slice(2, 6)}`;

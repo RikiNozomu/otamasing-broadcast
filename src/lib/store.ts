@@ -4,8 +4,9 @@
  * Changes reach other pages through the storage event, a BroadcastChannel, and a 1 s poll as a fallback.
  */
 import { useSyncExternalStore } from "react";
-import { activeExists, HOME, type AppData } from "./model";
+import { activeExists, HOME, newPhotos, type AppData } from "./model";
 import { sampleData } from "./sample";
+import { raceImageKey } from "./images";
 
 export const STORAGE_KEY = "otamasing-broadcast/v1";
 const CHANNEL = "otamasing-broadcast";
@@ -43,6 +44,8 @@ export function getData(): AppData {
   // data saved before results existed
   for (const r of data.races) {
     r.result ??= { page: 0, locked: [] };
+    // one picture per race before: it becomes the racecard's first picture
+    r.photos ??= { ...newPhotos(), card: { ...newPhotos().card, keys: data.images[raceImageKey(r.id)] ? [raceImageKey(r.id)] : [] } };
     for (const h of r.runners) { h.finish ??= null; h.outcome ??= null; h.time ??= ""; h.margin ??= ""; }
   }
   cache = data;

@@ -1,9 +1,9 @@
 /** Tab "รายการแข่งขัน": pick Active (home or a race), import/export, order, delete, home page settings, URL. */
 import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState, type ReactNode } from "react";
-import { BLANK, exportFile, HOME, mergeImport, parseActive, resultOf, newId, newStyle, parseFile, TRANSITIONS, type AppData, type ParseResult, type Transition } from "../lib/model";
+import { BLANK, exportFile, HOME, mergeImport, newPhotos, parseActive, resultOf, newId, newStyle, parseFile, TRANSITIONS, type AppData, type ParseResult, type Transition } from "../lib/model";
 import { setData, update, updateRace, useData, bumpImage } from "../lib/store";
-import { deleteImage, HOME_BG, putImage, raceImageKey } from "../lib/images";
+import { deleteImage, HOME_BG, putImage } from "../lib/images";
 import { sampleRunner } from "../lib/sample";
 import { resultPage } from "../lib/results";
 import { downloadJson } from "../lib/download";
@@ -80,18 +80,21 @@ export function RacesTab({ onEdit, toast }: { onEdit: (id: string) => void; toas
     const id = newId();
     update((x) => ({
       ...x,
-      races: [...x.races, { id, date: new Date().toISOString().slice(0, 10), course: "", round: "", postTime: "", name: "New Race", jpName: "", subtitle: "", grade: null, jump: false, class: null, surface: "Turf", distanceM: null, highlight: null, style: newStyle(), result: { page: 0, locked: [] }, runners: Array.from({ length: 8 }, (_, i) => ({ ...sampleRunner(i), name: `Horse ${i + 1}`, jockey: "", fav: null })) }],
+      races: [...x.races, { id, date: new Date().toISOString().slice(0, 10), course: "", round: "", postTime: "", name: "New Race", jpName: "", subtitle: "", grade: null, jump: false, class: null, surface: "Turf", distanceM: null, highlight: null, style: newStyle(), result: { page: 0, locked: [] }, photos: newPhotos(), runners: Array.from({ length: 8 }, (_, i) => ({ ...sampleRunner(i), name: `Horse ${i + 1}`, jockey: "", fav: null })) }],
     }));
     onEdit(id);
   };
   const remove = (id: string) => {
+    const race = d.races.find((r) => r.id === id);
+    const keys = race ? [...race.photos.card.keys, ...race.photos.result.keys] : [];
     update((x): AppData => ({
       ...x,
       races: x.races.filter((r) => r.id !== id),
       active: parseActive(x.active).raceId === id ? HOME : x.active,
       home: { ...x.home, highlight: x.home.highlight === id ? null : x.home.highlight },
+      images: Object.fromEntries(Object.entries(x.images).filter(([k]) => !keys.includes(k))),
     }));
-    deleteImage(raceImageKey(id)).catch(() => {});
+    for (const k of keys) deleteImage(k).catch(() => {});
     setConfirmDel(null);
   };
   const move = (from: number, to: number) => {

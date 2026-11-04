@@ -46,7 +46,7 @@ export function ResultPanel({ race }: { race: Race }) {
   const page = resultPage(race);
   const shown = resultEntries(race);
   const lockedCount = page.locked.size;
-  const grid = "grid grid-cols-[38px_40px_54px_minmax(0,1fr)_60px_46px] items-center gap-1 text-xs";
+  const grid = "grid grid-cols-[36px_40px_58px_minmax(0,1fr)_58px_44px] items-center gap-1 text-xs";
 
   return (
     <div className="grid gap-3" role="tabpanel" aria-labelledby="sub-result">
@@ -80,7 +80,7 @@ export function ResultPanel({ race }: { race: Race }) {
                   onClick={() => setView((v) => ({ ...v, locked: locked ? v.locked.filter((x) => x !== h.number) : [...v.locked.filter((x) => x !== h.number), h.number] }))}>
                   {locked ? "ล็อค" : "–"}
                 </button>
-                <input className={cx(inputClass, "px-1 text-center disabled:opacity-30")} type="number" min={1} max={MAX_RUNNERS} aria-label={`อันดับเบอร์ ${h.number}`}
+                <input className={cx(inputClass, "px-0 text-center [appearance:textfield] disabled:opacity-30 [&::-webkit-inner-spin-button]:appearance-none")} type="number" min={1} max={MAX_RUNNERS} aria-label={`อันดับเบอร์ ${h.number}`}
                   value={mark ? "" : h.finish ?? ""} disabled={!!mark} onBlur={resort}
                   onChange={(e) => setRunner(h.number, { finish: e.target.value ? Math.min(MAX_RUNNERS, Math.max(1, Math.round(+e.target.value))) : null })} />
                 <select className={cx(inputClass, "px-0.5", status && "border-yellow! text-yellow!")} aria-label={`สถานะเบอร์ ${h.number}`} value={status}

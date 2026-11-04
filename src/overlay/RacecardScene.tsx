@@ -61,7 +61,7 @@ export function RacecardScene({ race }: { race: Race }) {
   const columns = two ? [race.runners.slice(0, per), race.runners.slice(per)] : [race.runners];
   return (
     <div className="absolute inset-0 bg-scene" data-testid="racecard" data-race={race.id}>
-      <RacePhoto race={race} tableL={tableL} />
+      <RacePhoto photos={race.photos.card} tableL={tableL} />
       <div className="absolute grid grid-flow-col gap-x-[26px]" style={{ right, top: two ? 128 : 108 }}>
         {columns.map((c, i) => (
           <div className="grid content-start" key={i} data-testid="runner-column">
