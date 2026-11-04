@@ -39,8 +39,10 @@ export function RacecardScene({ race }: { race: Race }) {
   const colW = [show.draw ? bx : null, bx, hw, jw].filter((x): x is number => x != null);
   const cols = colW.map((w) => w + "px").join(" ");
   const tableW = (two ? 2 : 1) * (colW.reduce((a, b) => a + b, 0) + (colW.length - 1) * 8) + (two ? 26 : 0);
-  const right = two ? 30 : 192;
-  const fadeL = Math.min(640, 1920 - tableW - right - 420);
+  const right = two ? 30 : 40;
+  // the photo fades into navy over 620px starting 240px left of the table, so it follows the table's width
+  const tableL = 1920 - right - tableW;
+  const fadeL = tableL - 240;
   const barLeft = (show.draw ? bx + 8 : 0) + bx + 8, barWidth = hw + 8 + jw;
   const highlightOf = useHighlight(race.highlight);
 
@@ -87,7 +89,7 @@ export function RacecardScene({ race }: { race: Race }) {
         style={{ width: fadeL + 600, backgroundImage: photo ? `url("${photo}")` : undefined }} />
       <div className="absolute inset-y-0 w-[620px] bg-[linear-gradient(90deg,rgb(0_21_125/0)_0%,rgb(0_21_125/.85)_70%,var(--color-scene)_100%)]" style={{ left: fadeL }} />
       <div className="absolute inset-x-0 bottom-0 h-[420px] bg-[linear-gradient(0deg,rgb(0_0_0/.55),rgb(0_0_0/0))]" />
-      <Logo className="absolute top-[30px] right-10 w-60" />
+      <Logo className="absolute top-[30px] right-10 w-40" />
       <div className="absolute grid grid-flow-col gap-x-[26px]" style={{ right, top: two ? 128 : 108 }}>
         {columns.map((c, i) => (
           <div className="grid content-start" key={i} data-testid="runner-column">
