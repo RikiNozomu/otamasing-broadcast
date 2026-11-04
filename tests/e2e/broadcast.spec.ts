@@ -240,6 +240,17 @@ test("result page: 10 rows a page, locked horses stay on top with the yellow bar
   await expect(live.locator("[data-testid=pos]")).toHaveText(["1st", "2nd", "12th", "13th", "14th", "15th", "16th", "DNF", "DQ", "SCR"]);
   await dock.getByLabel("เวลาเบอร์ 9").fill("2:23.9");
   await expect(live.locator("[data-no='9'] [data-testid=time]")).toHaveText("2:23.9");
+  // fraction buttons type into the margin field in use, at the caret
+  await expect(dock.getByRole("button", { name: "ใส่ ½" })).toBeDisabled();
+  const margin = dock.getByLabel("ระยะห่างเบอร์ 9", { exact: true });
+  await margin.fill("2");
+  await dock.getByRole("button", { name: "ใส่ ½" }).click();
+  await expect(margin).toHaveValue("2½");
+  await expect(margin).toBeFocused();
+  await margin.press("Home");
+  await dock.getByRole("button", { name: "ใส่ ¾" }).click();
+  await expect(margin).toHaveValue("¾2½");
+  await expect(live.locator("[data-no='9'] [data-testid=margin]")).toHaveText("¾2½");
 });
 
 test("result pages take turns by themselves every x seconds", async ({ context }) => {
