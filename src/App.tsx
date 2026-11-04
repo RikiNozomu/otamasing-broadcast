@@ -1,6 +1,7 @@
+import { MotionConfig } from "motion/react";
 import { useEffect, useState } from "react";
 import { Dock } from "./dock/Dock";
-import { Home } from "./Home";
+import { Landing } from "./Landing";
 import { Overlay } from "./overlay/Overlay";
 
 /** Hash routing, so GitHub Pages serves one index.html for every page. */
@@ -13,7 +14,10 @@ export function App() {
     addEventListener("hashchange", on);
     return () => removeEventListener("hashchange", on);
   }, []);
-  if (r === "overlay") return <Overlay />;
-  if (r === "dock") return <Dock />;
-  return <Home />;
+  // "user": follow the OS "reduce motion" setting
+  return (
+    <MotionConfig reducedMotion="user">
+      {r === "overlay" ? <Overlay /> : r === "dock" ? <Dock /> : <Landing />}
+    </MotionConfig>
+  );
 }
