@@ -212,6 +212,27 @@
                 "additionalProperties": false,
                 "default": {}
               },
+              "result": {
+                "type": "object",
+                "properties": {
+                  "page": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 0
+                  },
+                  "locked": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 30
+                    },
+                    "default": []
+                  }
+                },
+                "additionalProperties": false,
+                "default": {}
+              },
               "runners": {
                 "type": "array",
                 "items": {
@@ -285,6 +306,27 @@
                     "scratched": {
                       "type": "boolean",
                       "default": false
+                    },
+                    "finish": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 30
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null
+                    },
+                    "time": {
+                      "type": "string",
+                      "default": ""
+                    },
+                    "margin": {
+                      "type": "string",
+                      "default": ""
                     }
                   },
                   "required": [

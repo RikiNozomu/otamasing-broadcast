@@ -126,3 +126,43 @@ test("two-column card for more than 18 runners", async ({ context }) => {
   await expect(overlay.locator("[data-layer][data-active] [data-testid=runner-column]")).toHaveCount(2);
   await expect(overlay.locator("[data-layer][data-active] [data-no]")).toHaveCount(22);
 });
+
+test("result page: 10 rows a page, locked horses stay on top with the yellow bar", async ({ context }) => {
+  const { dock, overlay } = await open(context);
+  await dock.getByLabel("ตั้งผล 11R Sample Cup เป็น Active").click();
+  await expect(dock.getByTestId("active-tag")).toHaveText("Active: 11R ผล");
+  const live = overlay.locator("[data-layer][data-active] [data-testid=result]");
+  const rows = live.locator("[data-no]");
+  await expect(rows).toHaveCount(10);
+  await expect(live.locator("[data-testid=pos]")).toHaveText(["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"]);
+  await expect(live.locator("[data-no='9'] [data-testid=time]")).toHaveText("2:24.1");
+  await expect(live.locator("[data-no='3'] [data-testid=margin]")).toHaveText("1¼");
+
+  await dock.getByRole("button", { name: "แก้ไข 11R Sample Cup" }).click();
+  await dock.getByRole("tab", { name: "ผล" }).click();
+  for (const no of [9, 3, 12]) await dock.getByLabel(`ล็อคเบอร์ ${no}`).click();
+  await expect(live.locator("[data-locked] [data-testid=highlight-bar]")).toHaveCount(6); // two bars per locked row
+  await dock.locator("[data-page='2']").click();
+  await expect(live.locator("[data-testid=pos]")).toHaveText(["1st", "2nd", "3rd", "11th", "12th", "13th", "14th", "15th", "16th", "17th"]);
+  await expect(live.locator("[data-locked]")).toHaveCount(3);
+
+  // a new position from the dock reaches the screen; unlocking puts the horse back in the paged rows
+  await dock.getByLabel("ล็อคเบอร์ 12").click();
+  await expect(live.locator("[data-testid=pos]")).toHaveText(["1st", "2nd", "11th", "12th", "13th", "14th", "15th", "16th", "17th"]);
+  await dock.getByLabel("เวลาเบอร์ 9").fill("2:23.9");
+  await expect(live.locator("[data-no='9'] [data-testid=time]")).toHaveText("2:23.9");
+});
+
+test("the blank page takes everything off the screen, with or without a transition", async ({ context }) => {
+  const { dock, overlay } = await open(context);
+  for (const t of ["wipe", "slide", "fade", "none"]) {
+    await dock.getByLabel("ทรานซิชัน").selectOption(t);
+    await dock.getByRole("button", { name: "ตั้งหน้าเปล่าเป็น Active" }).click();
+    await expect(dock.getByTestId("active-tag")).toHaveText("Active: หน้าเปล่า");
+    await expect(overlay.locator("[data-layer]")).toHaveCount(1, { timeout: 3000 });
+    await expect(overlay.locator("[data-layer][data-active=blank] [data-testid=blank]")).toHaveCount(1);
+    await dock.getByRole("button", { name: "ตั้งหน้าแรกเป็น Active" }).click();
+    await expect(overlay.locator("[data-layer]")).toHaveCount(1, { timeout: 3000 });
+    await expect(overlay.locator("[data-layer][data-active] [data-testid=race-list]")).toBeVisible();
+  }
+});

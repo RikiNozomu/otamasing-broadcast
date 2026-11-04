@@ -1,13 +1,15 @@
-/** Tab "แก้ไข": pick any race, edit its data (ข้อมูล) or its own style (สไตล์). Non-active races show a preview. */
+/** Tab "แก้ไข": pick any race, edit its data (ข้อมูล), its result (ผล) or its own style (สไตล์). A scene that is not on screen shows a preview. */
 import { motion } from "motion/react";
 import { useState } from "react";
-import { CLASSES, exportFile, GRADES, MAX_RUNNERS, MIN_RUNNERS, SURFACES, type Grade, type Race, type RaceClass, type Runner, type Scheme, type Style } from "../lib/model";
+import { CLASSES, exportFile, parseActive, resultOf, GRADES, MAX_RUNNERS, MIN_RUNNERS, SURFACES, type Grade, type Race, type RaceClass, type Runner, type Scheme, type Style } from "../lib/model";
 import { customPair, US } from "../lib/colors";
 import { downloadJson } from "../lib/download";
 import { cx } from "../lib/cx";
 import { bumpImage, update, updateRace, useData } from "../lib/store";
 import { deleteImage, putImage, raceImageKey } from "../lib/images";
 import { RacecardScene } from "../overlay/RacecardScene";
+import { ResultScene } from "../overlay/ResultScene";
+import { ResultPanel } from "./ResultPanel";
 import { Stage } from "../overlay/Stage";
 import { Button, buttonClass } from "../components/Button";
 import { Field, inputClass } from "../components/Field";
@@ -21,10 +23,13 @@ const CLASS_LABEL: Record<RaceClass, string> = { "2YO": "2YO", "2YO_F": "2YO (�
 
 export function EditTab({ editing, setEditing }: { editing: string | null; setEditing: (id: string) => void }) {
   const d = useData();
-  const [sub, setSub] = useState<"data" | "style">("data");
+  const [sub, setSub] = useState<"data" | "result" | "style">("data");
   const race = d.races.find((r) => r.id === editing) ?? d.races[0];
   if (!race) return <div className="grid content-start gap-3 p-3" role="tabpanel" id="p-edit"><p className={hintClass}>ยังไม่มีรายการแข่งขัน เพิ่มหรือนำเข้าได้ที่แท็บรายการแข่งขัน</p></div>;
-  const isAct = race.id === d.active;
+  const a = parseActive(d.active);
+  // which scene of this race the open sub-tab is about, and whether that scene is on screen
+  const view = sub === "result" ? "result" : "card";
+  const isAct = a.raceId === race.id && a.view === view;
   const set = (patch: Partial<Race>) => updateRace(race.id, (r) => ({ ...r, ...patch }));
   const setStyle = (fn: (s: Style) => Style) => updateRace(race.id, (r) => ({ ...r, style: fn(r.style) }));
   const setRunner = (i: number, patch: Partial<Runner>) =>
@@ -50,7 +55,7 @@ export function EditTab({ editing, setEditing }: { editing: string | null; setEd
     </Field>
   );
   const runnerGrid = "grid grid-cols-[30px_minmax(0,1fr)_46px_44px_22px] items-center gap-1 text-xs";
-  const subtabs = [["data", "ข้อมูล"], ["style", "สไตล์"]] as const;
+  const subtabs = [["data", "ข้อมูล"], ["result", "ผล"], ["style", "สไตล์"]] as const;
 
   return (
     <div className="grid content-start gap-3 p-3" role="tabpanel" id="p-edit" aria-labelledby="tab-edit">
@@ -60,21 +65,21 @@ export function EditTab({ editing, setEditing }: { editing: string | null; setEd
           return (
             <button key={x.id} type="button" role="tab" data-e={x.id} aria-selected={on} onClick={() => setEditing(x.id)}
               className={cx("inline-flex items-center gap-1.5 border px-2.5 py-1 font-display text-base leading-[normal] font-bold", on ? "border-yellow bg-yellow text-navy" : "border-line bg-studio text-ink-muted")}>
-              {x.id === d.active && <span className="size-[7px] rounded-full bg-ok" title="Active" />}{x.round || x.name}
+              {parseActive(d.active).raceId === x.id && <span className="size-[7px] rounded-full bg-ok" title="Active" />}{x.round || x.name}
             </button>
           );
         })}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
-        <span>{isAct ? "รายการนี้ Active อยู่ แก้แล้วขึ้นจอทันที" : "ไม่ได้ Active แก้ได้ แต่ยังไม่ขึ้นจอ (ดูพรีวิวด้านล่าง)"}</span>
+        <span>{isAct ? `${view === "result" ? "หน้าผล" : "การ์ด"}ของรายการนี้ Active อยู่ แก้แล้วขึ้นจอทันที` : `${view === "result" ? "หน้าผล" : "การ์ด"}นี้ไม่ได้ Active แก้ได้ แต่ยังไม่ขึ้นจอ (ดูพรีวิวด้านล่าง)`}</span>
         <span className="flex flex-wrap gap-1.5">
-          {!isAct && <Button variant="primary" onClick={() => update((x) => ({ ...x, active: race.id }))}>ตั้งเป็น Active</Button>}
+          {!isAct && <Button variant="primary" onClick={() => update((x) => ({ ...x, active: view === "result" ? resultOf(race.id) : race.id }))}>{view === "result" ? "ตั้งหน้าผลเป็น Active" : "ตั้งเป็น Active"}</Button>}
           <Button onClick={() => downloadJson(`${race.date.replaceAll("-", "")}-${(race.round || race.name).replace(/\W+/g, "")}.json`, JSON.stringify(exportFile(d, race.id), null, 2))}>ส่งออกรายการนี้</Button>
         </span>
       </div>
-      {!isAct && <div className="relative aspect-video overflow-hidden border border-line"><Stage className="pointer-events-none"><RacecardScene race={race} /></Stage></div>}
+      {!isAct && <div className="relative aspect-video overflow-hidden border border-line" data-testid="preview"><Stage className="pointer-events-none">{view === "result" ? <ResultScene race={race} /> : <RacecardScene race={race} />}</Stage></div>}
 
-      <div className="grid grid-cols-2 border border-line" role="tablist" aria-label="ส่วนที่แก้ไข">
+      <div className="grid grid-cols-3 border border-line" role="tablist" aria-label="ส่วนที่แก้ไข">
         {subtabs.map(([k, label]) => (
           <button key={k} type="button" role="tab" id={`sub-${k}`} aria-selected={sub === k} onClick={() => setSub(k)}
             className={cx("relative p-[7px] text-[13px]", sub === k ? "bg-raised text-ink" : "bg-studio text-ink-muted")}>
@@ -138,11 +143,13 @@ export function EditTab({ editing, setEditing }: { editing: string | null; setEd
               ))}
             </div>
             <div className="flex flex-wrap gap-1.5">
-              <Button disabled={n >= MAX_RUNNERS} onClick={() => updateRace(race.id, (r) => ({ ...r, runners: [...r.runners, { number: Math.max(...r.runners.map((x) => x.number)) + 1, draw: null, name: "", jockey: "", horseCountry: "", jockeyCountry: "", fav: null, scratched: false }] }))}>+ เพิ่มม้า</Button>
+              <Button disabled={n >= MAX_RUNNERS} onClick={() => updateRace(race.id, (r) => ({ ...r, runners: [...r.runners, { number: Math.max(...r.runners.map((x) => x.number)) + 1, draw: null, name: "", jockey: "", horseCountry: "", jockeyCountry: "", fav: null, scratched: false, finish: null, time: "", margin: "" }] }))}>+ เพิ่มม้า</Button>
               <Button disabled={n <= MIN_RUNNERS} onClick={() => updateRace(race.id, (r) => { const runners = r.runners.slice(0, -1); return { ...r, runners, highlight: runners.some((x) => x.number === r.highlight) ? r.highlight : null }; })}>− ลบตัวท้าย</Button>
             </div>
           </Section>
         </div>
+      ) : sub === "result" ? (
+        <ResultPanel race={race} />
       ) : (
         <div className="grid gap-3" role="tabpanel" aria-labelledby="sub-style">
           <Section title="สีช่อง DRAW (ซอง)">

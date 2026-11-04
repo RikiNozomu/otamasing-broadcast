@@ -37,6 +37,10 @@ export const RunnerSchema = z.object({
   jockeyCountry: country.default(""),
   fav: z.number().int().min(1).max(MAX_RUNNERS).nullable().default(null),
   scratched: z.boolean().default(false),
+  /** Result: finishing position (null = no result yet, or did not finish), time and margin as written, e.g. "1:56.7", "1¼", "nk". */
+  finish: z.number().int().min(1).max(MAX_RUNNERS).nullable().default(null),
+  time: z.string().default(""),
+  margin: z.string().default(""),
 });
 export type Runner = z.infer<typeof RunnerSchema>;
 
@@ -61,6 +65,13 @@ export const StyleSchema = z.object({
 });
 export type Style = z.infer<typeof StyleSchema>;
 
+/** How the result page is shown: which page of finishers, and the horses (by number) locked at the top of every page. */
+export const ResultViewSchema = z.object({
+  page: z.number().int().min(0).default(0),
+  locked: z.array(z.number().int().min(1).max(MAX_RUNNERS)).default([]),
+});
+export type ResultView = z.infer<typeof ResultViewSchema>;
+
 export const RaceSchema = z
   .object({
     id: z.string().min(1).optional(),
@@ -78,6 +89,7 @@ export const RaceSchema = z
     distanceM: z.number().int().positive().nullable().default(null),
     highlight: z.number().int().nullable().default(null),
     style: StyleSchema.default({}),
+    result: ResultViewSchema.default({}),
     runners: z.array(RunnerSchema).min(MIN_RUNNERS, `ม้าต้องมีอย่างน้อย ${MIN_RUNNERS} ตัว`).max(MAX_RUNNERS, `ม้าได้ไม่เกิน ${MAX_RUNNERS} ตัว`),
   })
   .superRefine((r, ctx) => {
@@ -110,7 +122,7 @@ export type FileInput = z.input<typeof FileSchema>;
 export interface AppData {
   version: 1;
   races: Race[];
-  /** "home" (the race list page) or a race id. */
+  /** "home" (the race list page), "blank" (nothing), a race id (its racecard) or `<race id>:result` (its result page). */
   active: string;
   transition: Transition;
   home: Home;
@@ -119,6 +131,21 @@ export interface AppData {
 }
 
 export const HOME = "home";
+/** Active value for an empty (transparent) screen. */
+export const BLANK = "blank";
+const RESULT = ":result";
+/** The Active value that shows a race's result page. */
+export const resultOf = (raceId: string) => raceId + RESULT;
+/** What an Active value points at. */
+export function parseActive(active: string): { view: "home" | "blank"; raceId?: undefined } | { view: "card" | "result"; raceId: string } {
+  if (active === HOME || active === BLANK) return { view: active };
+  return active.endsWith(RESULT) ? { view: "result", raceId: active.slice(0, -RESULT.length) } : { view: "card", raceId: active };
+}
+/** An Active value is valid when it is home or points at a race in the list. */
+export function activeExists(active: string, races: Pick<Race, "id">[]): boolean {
+  const a = parseActive(active);
+  return a.view === "home" || a.view === "blank" || races.some((r) => r.id === a.raceId);
+}
 
 export const newStyle = (): Style => StyleSchema.parse({});
 
@@ -154,8 +181,7 @@ export function parseFile(text: string): ParseResult {
 export function mergeImport(cur: AppData, file: z.output<typeof FileSchema>, mode: "append" | "replace"): AppData {
   const incoming: Race[] = file.races.map((r) => ({ ...r, id: r.id ?? newId() }));
   if (mode === "replace") {
-    const ids = new Set(incoming.map((r) => r.id));
-    const active = file.active && (file.active === HOME || ids.has(file.active)) ? file.active : HOME;
+    const active = file.active && activeExists(file.active, incoming) ? file.active : HOME;
     return {
       ...cur,
       races: incoming,
