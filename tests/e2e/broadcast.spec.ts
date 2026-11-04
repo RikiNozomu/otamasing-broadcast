@@ -50,6 +50,41 @@ test("edits in the dock reach the overlay: name, round, highlight, toggles, flag
   await expect(overlay.locator("[data-layer][data-active] [data-testid=table-head] span")).toHaveText(["NO.", "HORSE", "JOCKEY"]);
 });
 
+test("a moving highlight bar is never hidden behind the row backgrounds", async ({ context }) => {
+  const { dock, overlay } = await open(context);
+  await dock.getByRole("button", { name: "แก้ไข 11R Sample Cup" }).click();
+  // Sample every frame while the bar grows on row 3 and shrinks on row 9: wherever a bar reaches, it must be the
+  // topmost element at the left edge of the horse cell (a cell animating its opacity used to be painted over it).
+  const result = overlay.evaluate(() => new Promise<{ samples: Record<string, number>; hidden: number }>((resolve) => {
+    const samples: Record<string, number> = { "3": 0, "9": 0 };
+    let hidden = 0, start = 0;
+    const tick = (t: number) => {
+      const live = document.querySelector("[data-layer][data-active]");
+      if (live?.querySelector("[data-no='3'] [data-testid=highlight-bar]")) start ||= t;
+      if (start) {
+        for (const no of ["3", "9"]) {
+          const row = live!.querySelector<HTMLElement>(`[data-no='${no}']`)!;
+          const bar = row.querySelector<HTMLElement>("[data-testid=highlight-bar]");
+          const cell = row.querySelector<HTMLElement>("[data-testid=horse]")!.getBoundingClientRect();
+          const x = cell.left + 3, y = cell.top + cell.height / 2;
+          if (bar && bar.getBoundingClientRect().right > x + 1) {
+            samples[no]++;
+            if (document.elementFromPoint(x, y) !== bar) hidden++;
+          }
+        }
+        if (t - start > 600) return resolve({ samples, hidden });
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }));
+  await dock.locator("[data-h='3']").click();
+  const res = await result;
+  expect(res.samples["3"]).toBeGreaterThan(5);
+  expect(res.samples["9"]).toBeGreaterThan(5);
+  expect(res.hidden).toBe(0);
+});
+
 test("home page settings and race highlight", async ({ context }) => {
   const { dock, overlay } = await open(context);
   await dock.getByRole("button", { name: "ตั้งหน้าแรกเป็น Active" }).click();
