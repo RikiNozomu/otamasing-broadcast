@@ -1,15 +1,17 @@
 /**
  * The result scene (1920x1080): finishing order on the right, at most 10 rows per page.
  * Locked horses stay on top of every page with the yellow bar; on a page change the other rows
- * slide out to the left one after another and the next ones slide in from the right.
+ * slide out to the left one after another and the next ones slide in from the right. With auto on, the
+ * pages take turns every few seconds.
  */
 import { AnimatePresence, motion } from "motion/react";
 import type { Race, Runner } from "../lib/model";
 import { boxColors, drawOf } from "../lib/colors";
 import { ordinal } from "../lib/labels";
-import { resultMark, resultPage } from "../lib/results";
+import { resultMark, useResultPage } from "../lib/results";
 import { cx } from "../lib/cx";
 import { Flag } from "../components/Flag";
+import { FitText } from "../components/FitText";
 import { HighlightBar, NAVY } from "./Highlight";
 import { band, cell, NumberBox } from "./RacecardScene";
 import { RacePhoto, RaceTitle } from "./RaceBackdrop";
@@ -31,9 +33,10 @@ const ink = (locked: boolean, at: number) => ({
   transition: { color: locked ? { duration: 0.2, delay: 0.05 + at * 0.35 } : { duration: 0.2, delay: 0.05 + (1 - at) * 0.3 } },
 });
 
-export function ResultScene({ race, page }: { race: Race; page?: number }) {
+export function ResultScene({ race }: { race: Race }) {
   const S = race.style, show = S.show, n = race.runners.length;
-  const { rows, locked } = resultPage(race, page);
+  // the page on screen (pages take turns by themselves when auto is on)
+  const { rows, locked } = useResultPage(race);
   const pw = 96, bx = 62, tw = 130, mw = 120;
   const hw = 320 + (show.horseFlag ? 40 : 0) + (show.draw ? 0 : 40);
   const jw = 250 + (show.jockeyFlag ? 40 : 0);
@@ -65,11 +68,11 @@ export function ResultScene({ race, page }: { race: Race; page?: number }) {
         {show.draw && <NumberBox colors={boxColors(S.drawScheme, d, h.number, n, S, false)} value={d} />}
         <motion.span data-testid="horse" {...ink(on, 0)} className={cx(band, "font-bold")}>
           {show.horseFlag && <Flag code={h.horseCountry} className="relative h-[22px] w-[33px]" />}
-          <span className={cx("relative min-w-0 flex-1 overflow-hidden text-ellipsis", mark === "SCR" && "line-through decoration-[3px]")}>{h.name.toUpperCase()}</span>
+          <FitText className="relative" strike={mark === "SCR"}>{h.name.toUpperCase()}</FitText>
         </motion.span>
         <motion.span data-testid="jockey" {...ink(on, 0.45)} className={cx(band, "font-medium")}>
           {show.jockeyFlag && <Flag code={h.jockeyCountry} className="relative h-[22px] w-[33px]" />}
-          <span className="relative min-w-0 flex-1 overflow-hidden text-ellipsis">{h.jockey.toUpperCase()}</span>
+          <FitText className="relative">{h.jockey.toUpperCase()}</FitText>
         </motion.span>
         <motion.span data-testid="time" {...ink(on, 0.75)} className={cx(solid, "justify-center font-semibold")}><span className="relative">{mark ? "" : h.time}</span></motion.span>
         <motion.span data-testid="margin" {...ink(on, 0.9)} className={cx(solid, "justify-center font-semibold")}><span className="relative">{mark ? "" : h.margin}</span></motion.span>

@@ -228,6 +228,20 @@
                       "maximum": 30
                     },
                     "default": []
+                  },
+                  "auto": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "seconds": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 600,
+                    "default": 5
+                  },
+                  "since": {
+                    "type": "number",
+                    "default": 0
                   }
                 },
                 "additionalProperties": false,

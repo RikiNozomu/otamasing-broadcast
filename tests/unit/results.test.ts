@@ -1,12 +1,41 @@
 import { describe, expect, it } from "vitest";
 import { activeExists, parseActive, resultOf, type Race } from "../../src/lib/model";
-import { finishers, MAX_LOCKS, resultEntries, resultMark, resultPage } from "../../src/lib/results";
+import { finishers, MAX_LOCKS, resultEntries, resultMark, resultPage, setPageAuto, showPage, shownPage } from "../../src/lib/results";
 import { sampleData } from "../../src/lib/sample";
 
 const race = (): Race => structuredClone(sampleData().races.find((r) => r.id === "sample-11")!);
 const nos = (rows: { number: number }[]) => rows.map((h) => h.number);
 /** What the POS cell shows for each row: the position, or DNF / DQ / SCR. */
 const pos = (r: Race, rows: { number: number }[]) => rows.map((h) => { const x = r.runners.find((y) => y.number === h.number)!; return resultMark(x) ?? x.finish; });
+
+describe("result pages taking turns", () => {
+  it("turn every 5 seconds by default and wrap around", () => {
+    const r = race(); // 2 pages
+    expect(r.result).toMatchObject({ auto: true, seconds: 5 });
+    r.result = { ...r.result, page: 0, since: 1000 };
+    expect(shownPage(r, 5999)).toBe(0);
+    expect(shownPage(r, 6000)).toBe(1);
+    expect(shownPage(r, 11000)).toBe(0);
+  });
+  it("stay put with one page or with auto off", () => {
+    const r = race();
+    r.runners.forEach((h) => { if (h.finish && h.finish > 5) h.finish = null; });
+    expect(shownPage(r, 99_000)).toBe(0);
+    const m = race();
+    m.result = { ...m.result, auto: false, page: 1 };
+    expect(shownPage(m, 99_000)).toBe(1);
+  });
+  it("picking a page restarts the timer from it; changing auto or speed keeps the page on screen", () => {
+    const r = race();
+    r.result = showPage(r, 1, 500);
+    expect(r.result).toMatchObject({ page: 1, since: 500 });
+    expect(shownPage(r, 5499)).toBe(1);
+    expect(shownPage(r, 5500)).toBe(0);
+    const t = 7000; // page 1 (index 0) is on screen
+    expect(shownPage({ ...r, result: setPageAuto(r, { auto: false }, t) }, t + 60_000)).toBe(0);
+    expect(shownPage({ ...r, result: setPageAuto(r, { seconds: 2 }, t) }, t)).toBe(0);
+  });
+});
 
 describe("result paging", () => {
   // sample 11R: 16 finishers, horse 17 DNF, horse 6 scratched

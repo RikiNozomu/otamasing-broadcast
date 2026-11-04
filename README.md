@@ -10,7 +10,7 @@
 ## ใช้งาน
 
 - หน้าจอออกอากาศแสดงสิ่งที่ **Active** อยู่ใน dock: "หน้าแรก" (รายการแข่งขันทั้งหมด) หรือการ์ดรายชื่อม้าของรายการหนึ่ง เปลี่ยน Active แล้วมีทรานซิชัน (Wipe / Slide / Fade / ไม่มี)
-- แท็บ **รายการแข่งขัน**: ตั้ง Active, นำเข้า/ส่งออก JSON, เพิ่มเอง, ลาก ⠿ เรียงลำดับ, ลบ, ตั้งค่าหน้าแรก (Title, Sub title, BG, ไฮไลต์รายการ), คัดลอก URL
+- แท็บ **รายการแข่งขัน**: ตั้ง Active, นำเข้า JSON (เลือกไฟล์ หรือ "วาง JSON" เป็นข้อความ), ส่งออก (บันทึกไฟล์ หรือ "คัดลอก JSON" เพราะ dock ใน OBS ดาวน์โหลดไฟล์ไม่ได้), เพิ่มเอง, ลาก ⠿ เรียงลำดับ, ลบ, ตั้งค่าหน้าแรก (Title, Sub title, BG, ไฮไลต์รายการ), คัดลอก URL
 - แท็บ **แก้ไข**: เลือกรายการไหนก็ได้ (ไม่ต้อง Active) แก้ **ข้อมูล** (รูป, ชื่อ, เลขรอบ, เวลา, สนาม, พื้น, ระยะ, เกรด, Class, ไฮไลต์ม้า, ตารางม้า 2–30 ตัว พร้อมธง) และ **สไตล์** ของรายการนั้น (สี DRAW/NO. แบบ JRA / อเมริกา / ไม่มีสี / Custom, ป้ายเกรด, เปิด/ปิดแต่ละส่วน)
 - ข้อมูลเก็บใน localStorage ของเบราว์เซอร์ (รูปเก็บใน IndexedDB) ครั้งแรกจะมีข้อมูลตัวอย่างให้ dock กับหน้าจอใน OBS ใช้ที่เก็บเดียวกันจึงซิงก์กันทันที แต่ OBS แยกจาก Chrome ปกติ ถ้าเตรียมข้อมูลใน Chrome ให้ส่งออก JSON แล้วนำเข้าใน OBS
 - รูปแบบไฟล์ JSON: [docs/race-json.md](docs/race-json.md), ตัวอย่าง [docs/example-race.json](docs/example-race.json), JSON Schema [schema/race.schema.json](schema/race.schema.json)
@@ -30,7 +30,7 @@ Stack: Vite + React + TypeScript, [Tailwind CSS v4](https://tailwindcss.com) (�
 | โฟลเดอร์ | มีอะไร |
 | --- | --- |
 | `src/overlay/` | หน้าจอออกอากาศ: `LiveScene` (Active + ทรานซิชัน), `RacecardScene` (การ์ดรายชื่อม้า), `ResultScene` (ผลการแข่งขัน), `RaceBackdrop` (รูป โลโก้ ชื่อรายการ ที่สองหน้านั้นใช้ร่วมกัน), `RaceListScene` (หน้าแรก), `Highlight` (แถบไฮไลต์), `Stage` (ย่อขยาย 1920×1080) |
-| `src/dock/` | Dock: `RacesTab`, `EditTab`, `ResultPanel` (กรอกผล ล็อค เลือกหน้า), `FlagPicker` |
+| `src/dock/` | Dock: `RacesTab`, `EditTab`, `ResultPanel` (กรอกผล ล็อค เลือกหน้า), `FlagPicker`, `ExportPanel` (บันทึกไฟล์ / คัดลอก JSON) |
 | `src/components/` | ใช้ร่วมกันทั้งสองฝั่ง: `Logo`, `Flag`, `Button`, `Switch`, `Field`, `Section` |
 | `src/lib/` | ข้อมูลและกฎ: `model` (schema), `store`, `images`, `colors` (สีซอง/เบอร์), `labels` (ป้ายเกรด, Fav), `results` (แบ่งหน้าผล + ล็อค), `nations`, `flags` |
 

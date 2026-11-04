@@ -1,9 +1,9 @@
 /** Tab "แก้ไข": pick any race, edit its data (ข้อมูล), its result (ผล) or its own style (สไตล์). A scene that is not on screen shows a preview. */
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { CLASSES, exportFile, parseActive, resultOf, GRADES, MAX_RUNNERS, MIN_RUNNERS, SURFACES, type Grade, type Race, type RaceClass, type Runner, type Scheme, type Style } from "../lib/model";
 import { customPair, US } from "../lib/colors";
-import { downloadJson } from "../lib/download";
+import { ExportPanel } from "./ExportPanel";
 import { cx } from "../lib/cx";
 import { update, updateRace, useData } from "../lib/store";
 import { RacecardScene } from "../overlay/RacecardScene";
@@ -24,6 +24,8 @@ const CLASS_LABEL: Record<RaceClass, string> = { "2YO": "2YO", "2YO_F": "2YO (�
 export function EditTab({ editing, setEditing }: { editing: string | null; setEditing: (id: string) => void }) {
   const d = useData();
   const [sub, setSub] = useState<"data" | "result" | "style">("data");
+  /** The race whose export panel is open. */
+  const [exporting, setExporting] = useState<string | null>(null);
   const race = d.races.find((r) => r.id === editing) ?? d.races[0];
   if (!race) return <div className="grid content-start gap-3 p-3" role="tabpanel" id="p-edit"><p className={hintClass}>ยังไม่มีรายการแข่งขัน เพิ่มหรือนำเข้าได้ที่แท็บรายการแข่งขัน</p></div>;
   const a = parseActive(d.active);
@@ -73,9 +75,15 @@ export function EditTab({ editing, setEditing }: { editing: string | null; setEd
         <span>{isAct ? `${view === "result" ? "หน้าผล" : "การ์ด"}ของรายการนี้ Active อยู่ แก้แล้วขึ้นจอทันที` : `${view === "result" ? "หน้าผล" : "การ์ด"}นี้ไม่ได้ Active แก้ได้ แต่ยังไม่ขึ้นจอ (ดูพรีวิวด้านล่าง)`}</span>
         <span className="flex flex-wrap gap-1.5">
           {!isAct && <Button variant="primary" onClick={() => update((x) => ({ ...x, active: view === "result" ? resultOf(race.id) : race.id }))}>{view === "result" ? "ตั้งหน้าผลเป็น Active" : "ตั้งเป็น Active"}</Button>}
-          <Button onClick={() => downloadJson(`${race.date.replaceAll("-", "")}-${(race.round || race.name).replace(/\W+/g, "")}.json`, JSON.stringify(exportFile(d, race.id), null, 2))}>ส่งออกรายการนี้</Button>
+          <Button aria-expanded={exporting === race.id} onClick={() => setExporting((x) => (x === race.id ? null : race.id))}>ส่งออกรายการนี้</Button>
         </span>
       </div>
+      <AnimatePresence>
+        {exporting === race.id && (
+          <ExportPanel key="export" onClose={() => setExporting(null)}
+            job={{ name: `${race.date.replaceAll("-", "")}-${(race.round || race.name).replace(/\W+/g, "")}.json`, text: JSON.stringify(exportFile(d, race.id), null, 2), count: 1 }} />
+        )}
+      </AnimatePresence>
       {!isAct && <div className="relative aspect-video overflow-hidden border border-line" data-testid="preview"><Stage className="pointer-events-none">{view === "result" ? <ResultScene race={race} /> : <RacecardScene race={race} />}</Stage></div>}
 
       <div className="grid grid-cols-3 border border-line" role="tablist" aria-label="ส่วนที่แก้ไข">
