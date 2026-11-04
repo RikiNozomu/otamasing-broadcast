@@ -127,7 +127,9 @@ test("export inside OBS: copy the JSON and paste it back in", async ({ context }
   await dock.getByRole("button", { name: "ส่งออก", exact: true }).click();
   const panel = dock.getByTestId("export-panel");
   await expect(panel).toContainText("3 รายการ");
-  await expect(panel).toContainText("dock ใน OBS ดาวน์โหลดไฟล์ไม่ได้");
+  await expect(panel).toContainText("dock ใน OBS บันทึกไฟล์ไม่ได้");
+  // OBS's save dialog leaves an empty file, so saving is not offered there
+  await expect(panel.getByRole("button", { name: "บันทึกไฟล์…" })).toHaveCount(0);
   expect(JSON.parse(await dock.getByTestId("export-text").inputValue()).races).toHaveLength(3);
   await panel.getByRole("button", { name: "คัดลอก JSON" }).click();
   await expect(panel.getByRole("status")).toContainText("คัดลอกแล้ว");
@@ -163,6 +165,22 @@ test("export outside OBS downloads the file", async ({ context }) => {
   const [download] = await Promise.all([dock.waitForEvent("download"), dock.getByRole("button", { name: "บันทึกไฟล์…" }).click()]);
   expect(download.suggestedFilename()).toMatch(/^otamasing-broadcast-.*\.json$/);
   await expect(dock.getByTestId("export-panel").getByRole("status")).toContainText("ดาวน์โหลด");
+});
+
+test("a save that leaves an empty file is reported, and an empty file is named on import", async ({ context }) => {
+  // a "Save as" dialog that makes the file but fails to write it, like OBS's browser
+  await context.addInitScript(() => {
+    (window as unknown as { showSaveFilePicker: unknown }).showSaveFilePicker = async () => ({
+      createWritable: async () => ({ write: async () => {}, close: async () => { throw new DOMException("aborted", "AbortError"); } }),
+      getFile: async () => new File([], "x.json"),
+    });
+  });
+  const { dock } = await open(context);
+  await dock.getByRole("button", { name: "ส่งออก", exact: true }).click();
+  await dock.getByRole("button", { name: "บันทึกไฟล์…" }).click();
+  await expect(dock.getByTestId("export-panel").getByRole("alert")).toContainText("บันทึกไฟล์ไม่สำเร็จ");
+  await dock.getByTestId("import-file").setInputFiles({ name: "empty.json", mimeType: "application/json", buffer: Buffer.alloc(0) });
+  await expect(dock.getByRole("alert").last()).toContainText("ไฟล์ว่างเปล่า");
 });
 
 test("a name too long for its box is squeezed sideways, not cut with an ellipsis", async ({ context }) => {

@@ -1,6 +1,7 @@
 /**
  * Shown after pressing an export button: save the JSON as a file (a "Save as" dialog where the browser
- * has one), copy it, or select it in the box. Inside OBS downloads are ignored, so copying is the main way there.
+ * has one), copy it, or select it in the box. Inside OBS saving leaves an empty file and downloads are ignored,
+ * so there copying is the only way out.
  */
 import { motion } from "motion/react";
 import { useState } from "react";
@@ -18,7 +19,8 @@ export function ExportPanel({ job, onClose }: { job: ExportJob; onClose: () => v
   const save = async () => {
     const r = await saveJson(job.name, job.text);
     setMsg(r === "saved" ? { text: "บันทึกไฟล์แล้ว" } : r === "cancelled" ? null
-      : { text: obs ? "ใน OBS อาจไม่มีไฟล์ดาวน์โหลดออกมา ถ้าไม่เห็นไฟล์ให้กด \"คัดลอก JSON\" แทน" : `ดาวน์โหลด ${job.name} แล้ว` });
+      : r === "failed" ? { text: "บันทึกไฟล์ไม่สำเร็จ (ไฟล์อาจว่างเปล่า) ให้กด \"คัดลอก JSON\" แทน", bad: true }
+      : { text: `ดาวน์โหลด ${job.name} แล้ว` });
   };
   const copy = async () => {
     const ok = await copyText(job.text);
@@ -32,7 +34,8 @@ export function ExportPanel({ job, onClose }: { job: ExportJob; onClose: () => v
       <span className="flex flex-wrap items-center justify-between gap-1.5">
         <span className="min-w-0 truncate">{job.name} · {job.count} รายการ</span>
         <span className="flex flex-wrap gap-1.5">
-          <Button variant={obs ? "default" : "primary"} onClick={save}>บันทึกไฟล์…</Button>
+          {/* OBS's browser can't write files: its save dialog leaves an empty file, and downloads do nothing */}
+          {!obs && <Button variant="primary" onClick={save}>บันทึกไฟล์…</Button>}
           <Button variant={obs ? "primary" : "default"} onClick={copy}>คัดลอก JSON</Button>
           <Button onClick={onClose}>ปิด</Button>
         </span>
@@ -40,7 +43,7 @@ export function ExportPanel({ job, onClose }: { job: ExportJob; onClose: () => v
       <textarea readOnly aria-label="ข้อความ JSON" data-testid="export-text" value={job.text} rows={5}
         className={cx(inputClass, "resize-y font-mono text-[11px] leading-snug")} onFocus={(e) => e.currentTarget.select()} />
       {msg && <span role={msg.bad ? "alert" : "status"} className={cx("text-xs", msg.bad ? "text-danger-ink" : "text-ok")}>{msg.text}</span>}
-      {obs && !msg && <span className={hintClass}>dock ใน OBS ดาวน์โหลดไฟล์ไม่ได้ ใช้ "คัดลอก JSON" แล้วไปวางในโปรแกรมแก้ข้อความ หรือในช่อง "วาง JSON" ของ dock อีกเครื่อง</span>}
+      {obs && !msg && <span className={hintClass}>dock ใน OBS บันทึกไฟล์ไม่ได้ (ได้ไฟล์ว่าง) ใช้ "คัดลอก JSON" แล้วไปวางในโปรแกรมแก้ข้อความ หรือในช่อง "วาง JSON" ของ dock อีกเครื่อง</span>}
     </motion.div>
   );
 }

@@ -191,6 +191,7 @@ export type ParseResult = { ok: true; data: z.output<typeof FileSchema> } | { ok
 
 /** Validate a JSON text; errors are short Thai messages with the path, for the dock toast. */
 export function parseFile(text: string): ParseResult {
+  if (!text.trim()) return { ok: false, error: "ไฟล์ว่างเปล่า (ไม่มีข้อมูล) ถ้าส่งออกจาก dock ใน OBS ให้ใช้ \"คัดลอก JSON\" แทนการบันทึกไฟล์" };
   let json: unknown;
   try {
     json = JSON.parse(text);
