@@ -1,10 +1,11 @@
 /** Tab "รายการแข่งขัน": pick Active (home or a race), import/export, order, delete, home page settings, URL. */
 import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState, type ReactNode } from "react";
-import { exportFile, HOME, mergeImport, newId, newStyle, parseFile, TRANSITIONS, type AppData, type ParseResult, type Transition } from "../lib/model";
-import { setData, update, useData, bumpImage } from "../lib/store";
-import { deleteImage, HOME_BG, putImage, raceImageKey } from "../lib/images";
+import { BLANK, exportFile, HOME, mergeImport, newPhotos, parseActive, resultOf, newId, newStyle, parseFile, TRANSITIONS, type AppData, type ParseResult, type Transition } from "../lib/model";
+import { setData, update, updateRace, useData, bumpImage } from "../lib/store";
+import { deleteImage, HOME_BG, putImage } from "../lib/images";
 import { sampleRunner } from "../lib/sample";
+import { resultPage } from "../lib/results";
 import { downloadJson } from "../lib/download";
 import { cx } from "../lib/cx";
 import { Button, buttonClass } from "../components/Button";
@@ -18,8 +19,8 @@ const rowGrid = "grid grid-cols-[22px_minmax(0,1fr)_30px] gap-1";
 const sideBtn = "border border-line bg-studio";
 
 /** One clickable row: a round tag, title + facts, and on the right the ACTIVE badge (+ extra buttons). */
-function ActiveRow({ id, on, round, title, facts, label, onPick, side, home }: {
-  id: string; on: boolean; round: string; title: string; facts: string; label: string; onPick: () => void; side?: ReactNode; home?: boolean;
+function ActiveRow({ id, on, round, title, facts, label, onPick, side, home, badge = "ACTIVE" }: {
+  id: string; on: boolean; round: string; title: string; facts: string; label: string; onPick: () => void; side?: ReactNode; home?: boolean; badge?: string;
 }) {
   return (
     <div data-id={id} className={cx("relative grid w-full grid-cols-[minmax(44px,auto)_minmax(0,1fr)_auto] items-center gap-2.5 border bg-studio px-2.5 py-2 text-left", on ? "border-yellow" : "border-line")}>
@@ -30,9 +31,25 @@ function ActiveRow({ id, on, round, title, facts, label, onPick, side, home }: {
         <small className="text-xs text-ink-muted">{facts}</small>
       </span>
       <span className="relative grid justify-items-end gap-1.5">
-        <span className={cx("bg-yellow px-2 py-0.5 text-[11px] font-semibold text-navy", !on && "invisible")}>ACTIVE</span>
+        <span className={cx("bg-yellow px-2 py-0.5 text-[11px] font-semibold text-navy", !on && "invisible")}>{badge}</span>
         {side}
       </span>
+    </div>
+  );
+}
+
+/** Quick page buttons under the race whose result page is on screen (only when it has more than one page). */
+function ResultPages({ race }: { race: AppData["races"][number] }) {
+  const p = resultPage(race);
+  if (p.pageCount < 2) return null;
+  return (
+    <div className="mt-1 ml-[26px] flex flex-wrap items-center gap-1 text-xs text-ink-muted" role="group" aria-label={`หน้าผล ${race.round}`}>
+      <span>หน้าผล</span>
+      {Array.from({ length: p.pageCount }, (_, i) => (
+        <button key={i} type="button" aria-pressed={p.page === i} data-quick-page={i + 1}
+          className={cx("border-2 px-2.5 py-px font-display text-[15px] font-bold", p.page === i ? "border-yellow bg-yellow text-navy" : "border-white bg-navy text-white")}
+          onClick={() => updateRace(race.id, (r) => ({ ...r, result: { ...r.result, page: i } }))}>{i + 1}</button>
+      ))}
     </div>
   );
 }
@@ -63,18 +80,21 @@ export function RacesTab({ onEdit, toast }: { onEdit: (id: string) => void; toas
     const id = newId();
     update((x) => ({
       ...x,
-      races: [...x.races, { id, date: new Date().toISOString().slice(0, 10), course: "", round: "", postTime: "", name: "New Race", jpName: "", subtitle: "", grade: null, jump: false, class: null, surface: "Turf", distanceM: null, highlight: null, style: newStyle(), runners: Array.from({ length: 8 }, (_, i) => ({ ...sampleRunner(i), name: `Horse ${i + 1}`, jockey: "", fav: null })) }],
+      races: [...x.races, { id, date: new Date().toISOString().slice(0, 10), course: "", round: "", postTime: "", name: "New Race", jpName: "", subtitle: "", grade: null, jump: false, class: null, surface: "Turf", distanceM: null, highlight: null, style: newStyle(), result: { page: 0, locked: [] }, photos: newPhotos(), runners: Array.from({ length: 8 }, (_, i) => ({ ...sampleRunner(i), name: `Horse ${i + 1}`, jockey: "", fav: null })) }],
     }));
     onEdit(id);
   };
   const remove = (id: string) => {
+    const race = d.races.find((r) => r.id === id);
+    const keys = race ? [...race.photos.card.keys, ...race.photos.result.keys] : [];
     update((x): AppData => ({
       ...x,
       races: x.races.filter((r) => r.id !== id),
-      active: x.active === id ? HOME : x.active,
+      active: parseActive(x.active).raceId === id ? HOME : x.active,
       home: { ...x.home, highlight: x.home.highlight === id ? null : x.home.highlight },
+      images: Object.fromEntries(Object.entries(x.images).filter(([k]) => !keys.includes(k))),
     }));
-    deleteImage(raceImageKey(id)).catch(() => {});
+    for (const k of keys) deleteImage(k).catch(() => {});
     setConfirmDel(null);
   };
   const move = (from: number, to: number) => {
@@ -125,12 +145,20 @@ export function RacesTab({ onEdit, toast }: { onEdit: (id: string) => void; toas
       <div className="grid gap-1.5" data-testid="race-list">
         <div className={rowGrid}>
           <span />
+          <ActiveRow id={BLANK} home on={d.active === BLANK} round="BLANK" title="หน้าเปล่า" label="ตั้งหน้าเปล่าเป็น Active" onPick={() => setActive(BLANK)}
+            facts="ไม่แสดงอะไรบนจอ (โปร่งใส)" />
+          <span />
+        </div>
+        <div className={rowGrid}>
+          <span />
           <ActiveRow id={HOME} home on={d.active === HOME} round="HOME" title={`หน้าแรก · ${d.home.title}`} label="ตั้งหน้าแรกเป็น Active" onPick={() => setActive(HOME)}
             facts={`รายการแข่งขันทั้งหมด ${d.races.length} รายการ${d.home.subtitle ? ` · ${d.home.subtitle}` : ""}`} />
           <span />
         </div>
         {d.races.map((x, i) => {
           const name = `${x.round} ${x.name}`.trim();
+          const a = parseActive(d.active);
+          const on = a.raceId === x.id, resultOn = on && a.view === "result";
           return confirmDel === x.id ? (
             <motion.div layout key={x.id} className="flex items-center justify-between gap-1.5 border border-danger-ink px-2.5 py-2 text-[13px]">
               <span>ลบ {name}? ลบแล้วกู้คืนไม่ได้</span>
@@ -150,19 +178,25 @@ export function RacesTab({ onEdit, toast }: { onEdit: (id: string) => void; toas
               onDrop={(e) => { e.preventDefault(); if (dragFrom !== null) move(dragFrom, i); setDragFrom(null); setOver(null); }}
               onDragEnd={() => { setDragFrom(null); setOver(null); }}>
               <span className="grid cursor-grab place-items-center text-base text-ink-muted select-none" aria-hidden="true">⠿</span>
-              <ActiveRow id={x.id} on={x.id === d.active} round={x.round || "–"} title={x.name} label={`ตั้ง ${name} เป็น Active`} onPick={() => setActive(x.id)}
+              <ActiveRow id={x.id} on={on} badge={resultOn ? "ACTIVE · ผล" : "ACTIVE"} round={x.round || "–"} title={x.name} label={`ตั้ง ${name} เป็น Active`} onPick={() => setActive(x.id)}
                 facts={[x.date.replaceAll("-", "."), x.course, `${x.surface}${x.distanceM ? ` ${x.distanceM}m` : ""}`, `${x.runners.length} ตัว`].filter(Boolean).join(" · ")}
-                side={<Button className="px-3 py-[3px] text-xs" aria-label={`แก้ไข ${name}`} onClick={() => onEdit(x.id)}>แก้ไข</Button>} />
+                side={
+                  <span className="flex gap-1">
+                    <Button variant={resultOn ? "primary" : "default"} className="px-2.5 py-[3px] text-xs" aria-pressed={resultOn} aria-label={`ตั้งผล ${name} เป็น Active`} onClick={() => setActive(resultOf(x.id))}>ผล</Button>
+                    <Button className="px-3 py-[3px] text-xs" aria-label={`แก้ไข ${name}`} onClick={() => onEdit(x.id)}>แก้ไข</Button>
+                  </span>
+                } />
               <span className="grid grid-rows-[auto_1fr] gap-1">
                 <button type="button" className={cx(sideBtn, "py-0.5 text-[11px] text-ink-muted disabled:opacity-30")} aria-label={`เลื่อน ${x.round} ขึ้น`} disabled={i === 0} onClick={() => move(i, i - 1)}>▲</button>
                 <button type="button" className={cx(sideBtn, "text-danger-ink")} aria-label={`ลบ ${name}`} onClick={() => setConfirmDel(x.id)}>✕</button>
               </span>
             </div>
+            {resultOn && <ResultPages race={x} />}
             </motion.div>
           );
         })}
       </div>
-      <p className={hintClass}>กด "หน้าแรก" หรือรายการไหนก็ได้เพื่อตั้งเป็น Active จอจะเปลี่ยนพร้อมทรานซิชัน · ลาก ⠿ (หรือกด ▲) เพื่อเรียงลำดับ หน้าแรกเรียงตามนี้ · ข้อมูลเก็บในเครื่องนี้ ย้ายเครื่องใช้ส่งออก/นำเข้า JSON</p>
+      <p className={hintClass}>กดแถวไหนก็ได้เพื่อตั้งเป็น Active จอจะเปลี่ยนพร้อมทรานซิชัน · กดแถวรายการ = การ์ดรายชื่อม้า, ปุ่ม "ผล" = หน้าผลการแข่งขัน, "หน้าเปล่า" = เอากราฟิกออกจากจอ · ลาก ⠿ (หรือกด ▲) เพื่อเรียงลำดับ หน้าแรกเรียงตามนี้ · ข้อมูลเก็บในเครื่องนี้ ย้ายเครื่องใช้ส่งออก/นำเข้า JSON</p>
 
       <Section title={<label htmlFor="trans">ทรานซิชันตอนเปลี่ยน Active</label>}>
         <select id="trans" className={inputClass} value={d.transition} onChange={(e) => update((x) => ({ ...x, transition: e.target.value as Transition }))}>

@@ -25,6 +25,7 @@ export const putImage = (key: string, blob: Blob) => tx("readwrite", (s) => s.pu
 export const deleteImage = (key: string) => tx("readwrite", (s) => s.delete(key));
 export const getImage = (key: string) => tx<Blob | undefined>("readonly", (s) => s.get(key));
 
+/** Key of a race's one picture from before the slideshow (kept as the racecard's first picture). New pictures are `photo:<id>`. */
 export const raceImageKey = (id: string) => `race:${id}`;
 export const HOME_BG = "home";
 

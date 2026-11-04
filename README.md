@@ -29,10 +29,10 @@ Stack: Vite + React + TypeScript, [Tailwind CSS v4](https://tailwindcss.com) (�
 
 | โฟลเดอร์ | มีอะไร |
 | --- | --- |
-| `src/overlay/` | หน้าจอออกอากาศ: `LiveScene` (Active + ทรานซิชัน), `RacecardScene` (การ์ดรายชื่อม้า), `RaceListScene` (หน้าแรก), `Highlight` (แถบไฮไลต์), `Stage` (ย่อขยาย 1920×1080) |
-| `src/dock/` | Dock: `RacesTab`, `EditTab`, `FlagPicker` |
+| `src/overlay/` | หน้าจอออกอากาศ: `LiveScene` (Active + ทรานซิชัน), `RacecardScene` (การ์ดรายชื่อม้า), `ResultScene` (ผลการแข่งขัน), `RaceBackdrop` (รูป โลโก้ ชื่อรายการ ที่สองหน้านั้นใช้ร่วมกัน), `RaceListScene` (หน้าแรก), `Highlight` (แถบไฮไลต์), `Stage` (ย่อขยาย 1920×1080) |
+| `src/dock/` | Dock: `RacesTab`, `EditTab`, `ResultPanel` (กรอกผล ล็อค เลือกหน้า), `FlagPicker` |
 | `src/components/` | ใช้ร่วมกันทั้งสองฝั่ง: `Logo`, `Flag`, `Button`, `Switch`, `Field`, `Section` |
-| `src/lib/` | ข้อมูลและกฎ: `model` (schema), `store`, `images`, `colors` (สีซอง/เบอร์), `labels` (ป้ายเกรด, Fav), `nations`, `flags` |
+| `src/lib/` | ข้อมูลและกฎ: `model` (schema), `store`, `images`, `colors` (สีซอง/เบอร์), `labels` (ป้ายเกรด, Fav), `results` (แบ่งหน้าผล + ล็อค), `nations`, `flags` |
 
 ทุก PR รัน CI (typecheck, Vitest, Playwright) และ merge เข้า `main` แล้ว deploy ขึ้น GitHub Pages ให้เอง
 

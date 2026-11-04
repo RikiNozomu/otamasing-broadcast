@@ -23,6 +23,8 @@ export const CLASSES = {
 } as const;
 export type RaceClass = keyof typeof CLASSES;
 export const SURFACES = ["Turf", "Dirt", "Jump"] as const;
+export const OUTCOMES = ["dnf", "dq"] as const;
+export type Outcome = (typeof OUTCOMES)[number];
 
 const hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "สีต้องเป็น #RRGGBB");
 /** ISO 3166 alpha-2 code ("JP", "GB"...) or "" for no flag. */
@@ -37,6 +39,12 @@ export const RunnerSchema = z.object({
   jockeyCountry: country.default(""),
   fav: z.number().int().min(1).max(MAX_RUNNERS).nullable().default(null),
   scratched: z.boolean().default(false),
+  /** Result: finishing position (null = no result yet), time and margin as written, e.g. "1:56.7", "1¼", "nk". */
+  finish: z.number().int().min(1).max(MAX_RUNNERS).nullable().default(null),
+  /** Result for a horse with no position: did not finish or disqualified. (A scratched horse shows as SCR on its own.) */
+  outcome: z.enum(OUTCOMES).nullable().default(null),
+  time: z.string().default(""),
+  margin: z.string().default(""),
 });
 export type Runner = z.infer<typeof RunnerSchema>;
 
@@ -61,6 +69,28 @@ export const StyleSchema = z.object({
 });
 export type Style = z.infer<typeof StyleSchema>;
 
+/** How the result page is shown: which page of finishers, and the horses (by number) locked at the top of every page. */
+export const ResultViewSchema = z.object({
+  page: z.number().int().min(0).default(0),
+  locked: z.array(z.number().int().min(1).max(MAX_RUNNERS)).default([]),
+});
+export type ResultView = z.infer<typeof ResultViewSchema>;
+
+/**
+ * The left-hand pictures of one scene (racecard or result): keys of pictures in IndexedDB, in order.
+ * `index` is the picture shown at time `since`; with `auto` it moves on every `seconds` from there
+ * (every page works out the same picture from the clock, so nothing has to write while it runs).
+ */
+export const PhotoSetSchema = z.object({
+  keys: z.array(z.string()).default([]),
+  index: z.number().int().min(0).default(0),
+  auto: z.boolean().default(true),
+  seconds: z.number().min(1).max(600).default(5),
+  since: z.number().default(0),
+});
+export type PhotoSet = z.infer<typeof PhotoSetSchema>;
+export type PhotoView = "card" | "result";
+
 export const RaceSchema = z
   .object({
     id: z.string().min(1).optional(),
@@ -78,6 +108,9 @@ export const RaceSchema = z
     distanceM: z.number().int().positive().nullable().default(null),
     highlight: z.number().int().nullable().default(null),
     style: StyleSchema.default({}),
+    result: ResultViewSchema.default({}),
+    /** Pictures are not in the file (they live in the browser), only their order and slideshow settings. */
+    photos: z.object({ card: PhotoSetSchema.default({}), result: PhotoSetSchema.default({}) }).default({}),
     runners: z.array(RunnerSchema).min(MIN_RUNNERS, `ม้าต้องมีอย่างน้อย ${MIN_RUNNERS} ตัว`).max(MAX_RUNNERS, `ม้าได้ไม่เกิน ${MAX_RUNNERS} ตัว`),
   })
   .superRefine((r, ctx) => {
@@ -110,7 +143,7 @@ export type FileInput = z.input<typeof FileSchema>;
 export interface AppData {
   version: 1;
   races: Race[];
-  /** "home" (the race list page) or a race id. */
+  /** "home" (the race list page), "blank" (nothing), a race id (its racecard) or `<race id>:result` (its result page). */
   active: string;
   transition: Transition;
   home: Home;
@@ -119,8 +152,24 @@ export interface AppData {
 }
 
 export const HOME = "home";
+/** Active value for an empty (transparent) screen. */
+export const BLANK = "blank";
+const RESULT = ":result";
+/** The Active value that shows a race's result page. */
+export const resultOf = (raceId: string) => raceId + RESULT;
+/** What an Active value points at. */
+export function parseActive(active: string): { view: "home" | "blank"; raceId?: undefined } | { view: "card" | "result"; raceId: string } {
+  if (active === HOME || active === BLANK) return { view: active };
+  return active.endsWith(RESULT) ? { view: "result", raceId: active.slice(0, -RESULT.length) } : { view: "card", raceId: active };
+}
+/** An Active value is valid when it is home or points at a race in the list. */
+export function activeExists(active: string, races: Pick<Race, "id">[]): boolean {
+  const a = parseActive(active);
+  return a.view === "home" || a.view === "blank" || races.some((r) => r.id === a.raceId);
+}
 
 export const newStyle = (): Style => StyleSchema.parse({});
+export const newPhotos = (): Race["photos"] => ({ card: PhotoSetSchema.parse({}), result: PhotoSetSchema.parse({}) });
 
 let counter = 0;
 export const newId = () => `r${Date.now().toString(36)}${(counter++).toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -154,8 +203,7 @@ export function parseFile(text: string): ParseResult {
 export function mergeImport(cur: AppData, file: z.output<typeof FileSchema>, mode: "append" | "replace"): AppData {
   const incoming: Race[] = file.races.map((r) => ({ ...r, id: r.id ?? newId() }));
   if (mode === "replace") {
-    const ids = new Set(incoming.map((r) => r.id));
-    const active = file.active && (file.active === HOME || ids.has(file.active)) ? file.active : HOME;
+    const active = file.active && activeExists(file.active, incoming) ? file.active : HOME;
     return {
       ...cur,
       races: incoming,

@@ -1,7 +1,7 @@
 /** The OBS Custom Browser Dock: two tabs, รายการแข่งขัน and แก้ไข. */
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { HOME } from "../lib/model";
+import { parseActive } from "../lib/model";
 import { useData } from "../lib/store";
 import { cx } from "../lib/cx";
 import { EditTab } from "./EditTab";
@@ -12,7 +12,7 @@ export type Toast = (msg: string, bad?: boolean) => void;
 export function Dock() {
   const d = useData();
   const [tab, setTab] = useState<"races" | "edit">("races");
-  const [editing, setEditing] = useState<string | null>(d.active !== HOME ? d.active : d.races[0]?.id ?? null);
+  const [editing, setEditing] = useState<string | null>(parseActive(d.active).raceId ?? d.races[0]?.id ?? null);
   const [toastMsg, setToast] = useState<{ msg: string; bad: boolean } | null>(null);
   const timer = useRef<number | undefined>(undefined);
   const toast = useCallback<Toast>((msg, bad = false) => {
@@ -21,13 +21,15 @@ export function Dock() {
     timer.current = window.setTimeout(() => setToast(null), bad ? 6000 : 2500);
   }, []);
   useEffect(() => { document.body.classList.add("bg-panel"); document.title = "โอตะม้าซิ่ง Broadcast · Dock"; }, []);
-  const active = d.races.find((r) => r.id === d.active);
+  const a = parseActive(d.active);
+  const race = d.races.find((r) => r.id === a.raceId);
+  const activeLabel = a.view === "blank" ? "หน้าเปล่า" : !race ? "หน้าแรก" : `${race.round || race.name}${a.view === "result" ? " ผล" : ""}`;
   const tabs = [["races", "รายการแข่งขัน"], ["edit", "แก้ไข"]] as const;
   return (
     <div className="grid min-h-screen grid-rows-[auto_auto_1fr] bg-panel">
       <div className="flex items-center justify-between bg-navy px-3.5 py-2.5 font-display text-[15px] font-bold tracking-[.06em] uppercase">
         <span>โอตะม้าซิ่ง Broadcast</span>
-        <span data-testid="active-tag">Active: {active ? active.round || active.name : "หน้าแรก"}</span>
+        <span data-testid="active-tag">Active: {activeLabel}</span>
       </div>
       <div className="grid grid-cols-2 border-b border-line" role="tablist">
         {tabs.map(([k, label]) => (
