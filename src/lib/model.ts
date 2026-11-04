@@ -127,6 +127,8 @@ export const HomeSchema = z.object({
   title: z.string().default("Today's Races"),
   subtitle: z.string().default(""),
   highlight: z.string().nullable().default(null),
+  /** Page of the race list on screen (0-based), HOME_ROWS races a page. */
+  page: z.number().int().min(0).default(0),
 });
 export type Home = z.infer<typeof HomeSchema>;
 

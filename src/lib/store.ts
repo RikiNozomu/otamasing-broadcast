@@ -41,6 +41,7 @@ export function getData(): AppData {
   const data = d as AppData;
   data.images ??= {};
   if (!activeExists(data.active, data.races)) data.active = HOME;
+  data.home.page ??= 0;
   // data saved before results existed
   for (const r of data.races) {
     r.result ??= { page: 0, locked: [] };

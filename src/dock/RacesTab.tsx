@@ -6,6 +6,8 @@ import { setData, update, updateRace, useData, bumpImage } from "../lib/store";
 import { deleteImage, HOME_BG, putImage } from "../lib/images";
 import { sampleRunner } from "../lib/sample";
 import { resultPage } from "../lib/results";
+import { HOME_ROWS, paginate } from "../lib/paging";
+import { PageButtons } from "../components/PageButtons";
 import { downloadJson } from "../lib/download";
 import { cx } from "../lib/cx";
 import { Button, buttonClass } from "../components/Button";
@@ -38,22 +40,6 @@ function ActiveRow({ id, on, round, title, facts, label, onPick, side, home, bad
   );
 }
 
-/** Quick page buttons under the race whose result page is on screen (only when it has more than one page). */
-function ResultPages({ race }: { race: AppData["races"][number] }) {
-  const p = resultPage(race);
-  if (p.pageCount < 2) return null;
-  return (
-    <div className="mt-1 ml-[26px] flex flex-wrap items-center gap-1 text-xs text-ink-muted" role="group" aria-label={`หน้าผล ${race.round}`}>
-      <span>หน้าผล</span>
-      {Array.from({ length: p.pageCount }, (_, i) => (
-        <button key={i} type="button" aria-pressed={p.page === i} data-quick-page={i + 1}
-          className={cx("border-2 px-2.5 py-px font-display text-[15px] font-bold", p.page === i ? "border-yellow bg-yellow text-navy" : "border-white bg-navy text-white")}
-          onClick={() => updateRace(race.id, (r) => ({ ...r, result: { ...r.result, page: i } }))}>{i + 1}</button>
-      ))}
-    </div>
-  );
-}
-
 export function RacesTab({ onEdit, toast }: { onEdit: (id: string) => void; toast: Toast }) {
   const d = useData();
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
@@ -63,6 +49,9 @@ export function RacesTab({ onEdit, toast }: { onEdit: (id: string) => void; toas
   const fileRef = useRef<HTMLInputElement>(null);
   const overlayUrl = `${location.origin}${location.pathname}#/overlay`;
 
+  const home = paginate(d.races, HOME_ROWS, d.home.page);
+  const setHomePage = (i: number) => update((x) => ({ ...x, home: { ...x.home, page: i } }));
+  const homePages = <PageButtons label="หน้า" count={home.pageCount} page={home.page} onPick={setHomePage} className="ml-[26px]" testId="quick-home-pages" />;
   const setActive = (id: string) => update((x) => ({ ...x, active: id }));
   const pickFile = async (f: File | undefined) => {
     if (!f) return;
@@ -155,6 +144,7 @@ export function RacesTab({ onEdit, toast }: { onEdit: (id: string) => void; toas
             facts={`รายการแข่งขันทั้งหมด ${d.races.length} รายการ${d.home.subtitle ? ` · ${d.home.subtitle}` : ""}`} />
           <span />
         </div>
+        {d.active === HOME && homePages}
         {d.races.map((x, i) => {
           const name = `${x.round} ${x.name}`.trim();
           const a = parseActive(d.active);
@@ -191,7 +181,10 @@ export function RacesTab({ onEdit, toast }: { onEdit: (id: string) => void; toas
                 <button type="button" className={cx(sideBtn, "text-danger-ink")} aria-label={`ลบ ${name}`} onClick={() => setConfirmDel(x.id)}>✕</button>
               </span>
             </div>
-            {resultOn && <ResultPages race={x} />}
+            {resultOn && (() => { const p = resultPage(x); return (
+              <PageButtons label="หน้าผล" count={p.pageCount} page={p.page} className="mt-1 ml-[26px]" testId="quick-result-pages"
+                onPick={(i) => updateRace(x.id, (r) => ({ ...r, result: { ...r.result, page: i } }))} />
+            ); })()}
             </motion.div>
           );
         })}
@@ -212,14 +205,17 @@ export function RacesTab({ onEdit, toast }: { onEdit: (id: string) => void; toas
           <input type="file" id="l-bg" accept="image/*" hidden onChange={(e) => { setBg(e.target.files?.[0]); e.target.value = ""; }} />
           {d.images[HOME_BG] ? <Button onClick={clearBg}>ไม่ใช้รูป</Button> : null}
         </div>
-        <span className={hintClass}>ไฮไลต์รายการบนหน้าแรก (แยกจาก Active, กดซ้ำเพื่อเอาออก)</span>
+        <PageButtons label="หน้า" count={home.pageCount} page={home.page} onPick={setHomePage} testId="home-pages" />
+        <span className={hintClass}>หน้าละ {HOME_ROWS} รายการ ตามลำดับในรายการด้านบน{home.pageCount > 1 ? ` · ทั้งหมด ${home.pageCount} หน้า` : ""}</span>
+        <span className={hintClass}>ไฮไลต์รายการบนหน้าแรก (แยกจาก Active, กดซ้ำเพื่อเอาออก, ถ้าอยู่หน้าอื่นจะเปลี่ยนไปหน้านั้นให้)</span>
         <div className="flex flex-wrap gap-1">
-          {d.races.map((x) => {
+          {d.races.map((x, i) => {
             const on = d.home.highlight === x.id;
             return (
               <button key={x.id} type="button" data-lh={x.id} aria-pressed={on} title={x.name}
                 className={cx("max-w-[140px] truncate border-2 px-3 py-[3px] font-display text-[17px] font-bold", on ? "border-yellow bg-yellow text-navy" : "border-white bg-navy text-white")}
-                onClick={() => update((y) => ({ ...y, home: { ...y.home, highlight: y.home.highlight === x.id ? null : x.id } }))}>{x.round || x.name}</button>
+                // highlighting a race on another page also turns to that page
+                onClick={() => update((y) => ({ ...y, home: y.home.highlight === x.id ? { ...y.home, highlight: null } : { ...y.home, highlight: x.id, page: Math.floor(i / HOME_ROWS) } }))}>{x.round || x.name}</button>
             );
           })}
         </div>
