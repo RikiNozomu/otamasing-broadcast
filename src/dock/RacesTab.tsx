@@ -1,14 +1,14 @@
 /** Tab "รายการแข่งขัน": pick Active (home or a race), import/export, order, delete, home page settings, URL. */
 import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState, type ReactNode } from "react";
-import { BLANK, exportFile, HOME, mergeImport, newPhotos, parseActive, resultOf, newId, newStyle, parseFile, TRANSITIONS, type AppData, type ParseResult, type Transition } from "../lib/model";
+import { BLANK, exportFile, HOME, mergeImport, newPhotos, newResult, parseActive, resultOf, newId, newStyle, parseFile, TRANSITIONS, type AppData, type ParseResult, type Race, type Transition } from "../lib/model";
 import { setData, update, updateRace, useData, bumpImage } from "../lib/store";
 import { deleteImage, HOME_BG, putImage } from "../lib/images";
 import { sampleRunner } from "../lib/sample";
-import { resultPage } from "../lib/results";
+import { showPage, useResultPage } from "../lib/results";
 import { HOME_ROWS, paginate } from "../lib/paging";
 import { PageButtons } from "../components/PageButtons";
-import { downloadJson } from "../lib/download";
+import { ExportPanel } from "./ExportPanel";
 import { cx } from "../lib/cx";
 import { Button, buttonClass } from "../components/Button";
 import { Field, inputClass } from "../components/Field";
@@ -40,12 +40,23 @@ function ActiveRow({ id, on, round, title, facts, label, onPick, side, home, bad
   );
 }
 
+/** Page buttons under a race whose result is on screen; the page on screen follows auto page turning. */
+function QuickResultPages({ race }: { race: Race }) {
+  const p = useResultPage(race);
+  return (
+    <PageButtons label="หน้าผล" count={p.pageCount} page={p.page} className="mt-1 ml-[26px]" testId="quick-result-pages"
+      onPick={(i) => updateRace(race.id, (r) => ({ ...r, result: showPage(r, i) }))} />
+  );
+}
+
 export function RacesTab({ onEdit, toast }: { onEdit: (id: string) => void; toast: Toast }) {
   const d = useData();
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
   const [pending, setPending] = useState<{ name: string; data: Extract<ParseResult, { ok: true }>["data"] } | null>(null);
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [over, setOver] = useState<number | null>(null);
+  const [exportName, setExportName] = useState<string | null>(null);
+  const [paste, setPaste] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const overlayUrl = `${location.origin}${location.pathname}#/overlay`;
 
@@ -59,6 +70,12 @@ export function RacesTab({ onEdit, toast }: { onEdit: (id: string) => void; toas
     if (!res.ok) return toast(`นำเข้าไม่ได้: ${res.error}`, true);
     setPending({ name: f.name, data: res.data });
   };
+  const pickText = () => {
+    const res = parseFile(paste ?? "");
+    if (!res.ok) return toast(`นำเข้าไม่ได้: ${res.error}`, true);
+    setPending({ name: "ข้อความที่วาง", data: res.data });
+    setPaste(null);
+  };
   const doImport = (mode: "append" | "replace") => {
     if (!pending) return;
     setData(mergeImport(d, pending.data, mode));
@@ -69,7 +86,7 @@ export function RacesTab({ onEdit, toast }: { onEdit: (id: string) => void; toas
     const id = newId();
     update((x) => ({
       ...x,
-      races: [...x.races, { id, date: new Date().toISOString().slice(0, 10), course: "", round: "", postTime: "", name: "New Race", jpName: "", subtitle: "", grade: null, jump: false, class: null, surface: "Turf", distanceM: null, highlight: null, style: newStyle(), result: { page: 0, locked: [] }, photos: newPhotos(), runners: Array.from({ length: 8 }, (_, i) => ({ ...sampleRunner(i), name: `Horse ${i + 1}`, jockey: "", fav: null })) }],
+      races: [...x.races, { id, date: new Date().toISOString().slice(0, 10), course: "", round: "", postTime: "", name: "New Race", jpName: "", subtitle: "", grade: null, jump: false, class: null, surface: "Turf", distanceM: null, highlight: null, style: newStyle(), result: newResult(), photos: newPhotos(), runners: Array.from({ length: 8 }, (_, i) => ({ ...sampleRunner(i), name: `Horse ${i + 1}`, jockey: "", fav: null })) }],
     }));
     onEdit(id);
   };
@@ -114,9 +131,26 @@ export function RacesTab({ onEdit, toast }: { onEdit: (id: string) => void; toas
       <div className="flex flex-wrap gap-1.5">
         <Button variant="primary" onClick={() => fileRef.current?.click()}>นำเข้า JSON</Button>
         <input ref={fileRef} type="file" accept="application/json,.json" hidden data-testid="import-file" onChange={(e) => { pickFile(e.target.files?.[0]); e.target.value = ""; }} />
-        <Button onClick={() => downloadJson(`otamasing-broadcast-${stamp()}.json`, JSON.stringify(exportFile(d), null, 2))}>ส่งออก</Button>
+        <Button onClick={() => { setPending(null); setPaste((p) => (p == null ? "" : null)); }} aria-expanded={paste != null}>วาง JSON</Button>
+        <Button onClick={() => setExportName((x) => (x ? null : `otamasing-broadcast-${stamp()}.json`))} aria-expanded={!!exportName}>ส่งออก</Button>
         <Button onClick={addRace}>+ เพิ่มเอง</Button>
       </div>
+      <AnimatePresence>
+        {exportName && <ExportPanel key="export" job={{ name: exportName, text: JSON.stringify(exportFile(d), null, 2), count: d.races.length }} onClose={() => setExportName(null)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {paste != null && (
+          <motion.div key="paste" role="dialog" aria-label="วาง JSON" className="grid gap-1.5 overflow-hidden border border-line px-2.5 py-2 text-[13px]"
+            initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
+            <textarea aria-label="ข้อความ JSON ที่จะนำเข้า" data-testid="paste-text" rows={5} value={paste} placeholder='{ "races": [ ... ] }' autoFocus
+              className="w-full min-w-0 resize-y border border-line bg-panel px-1.5 py-[5px] font-mono text-[11px] leading-snug text-ink" onChange={(e) => setPaste(e.target.value)} />
+            <span className="flex flex-wrap gap-1.5">
+              <Button variant="primary" disabled={!paste.trim()} onClick={pickText}>นำเข้าข้อความนี้</Button>
+              <Button onClick={() => setPaste(null)}>ยกเลิก</Button>
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {pending && (
           <motion.div role="alertdialog" aria-label="ยืนยันการนำเข้า" className="flex flex-wrap items-center justify-between gap-1.5 overflow-hidden border border-yellow px-2.5 py-2 text-[13px]"
@@ -181,10 +215,7 @@ export function RacesTab({ onEdit, toast }: { onEdit: (id: string) => void; toas
                 <button type="button" className={cx(sideBtn, "text-danger-ink")} aria-label={`ลบ ${name}`} onClick={() => setConfirmDel(x.id)}>✕</button>
               </span>
             </div>
-            {resultOn && (() => { const p = resultPage(x); return (
-              <PageButtons label="หน้าผล" count={p.pageCount} page={p.page} className="mt-1 ml-[26px]" testId="quick-result-pages"
-                onPick={(i) => updateRace(x.id, (r) => ({ ...r, result: { ...r.result, page: i } }))} />
-            ); })()}
+            {resultOn && <QuickResultPages race={x} />}
             </motion.div>
           );
         })}

@@ -5,6 +5,7 @@ import { boxColors, drawOf, favColor } from "../lib/colors";
 import { ordinal } from "../lib/labels";
 import { cx } from "../lib/cx";
 import { Flag } from "../components/Flag";
+import { FitText } from "../components/FitText";
 import { HighlightBar, useHighlight, type RowHighlight } from "./Highlight";
 import { pill, RacePhoto, RaceTitle } from "./RaceBackdrop";
 
@@ -48,12 +49,12 @@ export function RacecardScene({ race }: { race: Race }) {
         <NumberBox colors={boxColors(S.numberScheme, h.number, h.number, n, S, true)} value={h.number} hl={hl} />
         <motion.span data-testid="horse" initial={false} {...hl.ink(false)} className={cx(band, "font-bold")}>
           {show.horseFlag && <Flag code={h.horseCountry} className="relative h-[22px] w-[33px]" />}
-          <span className={cx("relative min-w-0 flex-1 overflow-hidden text-ellipsis", h.scratched && "line-through decoration-[3px]")}>{h.name.toUpperCase()}</span>
+          <FitText className="relative" strike={h.scratched}>{h.name.toUpperCase()}</FitText>
           {show.fav && h.fav && !h.scratched ? <span className={cx(pill, "relative h-6 flex-none px-[9px] text-[18px] text-scene")} style={{ background: favColor(h.fav) }}>{ordinal(h.fav)}</span> : null}
         </motion.span>
         <motion.span data-testid="jockey" initial={false} {...hl.ink(true)} className={cx(band, "font-medium")}>
           {show.jockeyFlag && <Flag code={h.jockeyCountry} className="relative h-[22px] w-[33px]" />}
-          <span className={cx("relative min-w-0 flex-1 overflow-hidden text-ellipsis", h.scratched && "line-through decoration-[3px]")}>{h.jockey.toUpperCase()}</span>
+          <FitText className="relative" strike={h.scratched}>{h.jockey.toUpperCase()}</FitText>
         </motion.span>
       </div>
     );

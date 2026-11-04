@@ -70,11 +70,19 @@ export const StyleSchema = z.object({
 export type Style = z.infer<typeof StyleSchema>;
 
 /** How the result page is shown: which page of finishers, and the horses (by number) locked at the top of every page. */
+/**
+ * How the result page is shown: `page` is the page on screen at time `since`; with `auto` the pages
+ * take turns every `seconds` from there (like the picture slideshow). Locked horses stay on every page.
+ */
 export const ResultViewSchema = z.object({
   page: z.number().int().min(0).default(0),
   locked: z.array(z.number().int().min(1).max(MAX_RUNNERS)).default([]),
+  auto: z.boolean().default(true),
+  seconds: z.number().min(1).max(600).default(5),
+  since: z.number().default(0),
 });
 export type ResultView = z.infer<typeof ResultViewSchema>;
+export const newResult = (): ResultView => ResultViewSchema.parse({});
 
 /**
  * The left-hand pictures of one scene (racecard or result): keys of pictures in IndexedDB, in order.

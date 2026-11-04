@@ -1,15 +1,16 @@
 /**
  * Sub-tab "ผล" of the edit tab: enter the finishing position (or DNF / DQ / SCR), time and margin of each horse,
- * lock horses to the top of every page, and pick the page shown on screen.
+ * lock horses to the top of every page, and pick the page shown on screen (or let the pages take turns).
  */
 import { useState } from "react";
 import { MAX_RUNNERS, type Race, type ResultView, type Runner } from "../lib/model";
-import { MAX_LOCKS, RESULT_ROWS, resultEntries, resultMark, resultPage } from "../lib/results";
+import { MAX_LOCKS, RESULT_ROWS, resultEntries, resultMark, setPageAuto, showPage, useResultPage } from "../lib/results";
 import { getData, updateRace } from "../lib/store";
 import { cx } from "../lib/cx";
 import { Button } from "../components/Button";
 import { inputClass } from "../components/Field";
 import { Section, hintClass } from "../components/Section";
+import { Switch } from "../components/Switch";
 
 /** Rows in result order (finishers, DNF, DQ, SCR), then the horses with no result yet by number. */
 const byFinish = (race: Race) => {
@@ -43,7 +44,7 @@ export function ResultPanel({ race }: { race: Race }) {
     setRunner(no, st === "" ? { scratched: false, outcome: null } : st === "scr" ? { scratched: true, outcome: null, finish: null } : { scratched: false, outcome: st, finish: null });
   const setView = (fn: (v: ResultView) => ResultView) => updateRace(race.id, (r) => ({ ...r, result: fn(r.result) }));
 
-  const page = resultPage(race);
+  const page = useResultPage(race);
   const shown = resultEntries(race);
   const lockedCount = page.locked.size;
   const grid = "grid grid-cols-[36px_40px_58px_minmax(0,1fr)_58px_44px] items-center gap-1 text-xs";
@@ -55,12 +56,22 @@ export function ResultPanel({ race }: { race: Race }) {
           {Array.from({ length: page.pageCount }, (_, i) => (
             <button key={i} type="button" data-page={i + 1} aria-pressed={page.page === i}
               className={cx("border-2 px-3 py-[3px] font-display text-[17px] font-bold", page.page === i ? "border-yellow bg-yellow text-navy" : "border-white bg-navy text-white")}
-              onClick={() => setView((v) => ({ ...v, page: i }))}>หน้า {i + 1}</button>
+              onClick={() => updateRace(race.id, (r) => ({ ...r, result: showPage(r, i) }))}>หน้า {i + 1}</button>
           ))}
         </div>
         <span className={hintClass}>
-          หน้าละ {RESULT_ROWS} แถว · ขึ้นจอ {shown.length} ตัว · ล็อค {lockedCount} ตัว (อยู่บนสุดทุกหน้า แถบเหลือง) ที่เหลือเปลี่ยนตามหน้าทีละ {RESULT_ROWS - lockedCount} แถว
+          {page.pageCount > 1 && race.result.auto ? `วนหน้าอัตโนมัติทุก ${race.result.seconds} วินาที กดเลขหน้าเพื่อข้ามไปหน้านั้นแล้ววนต่อจากตรงนั้น · ` : ""}หน้าละ {RESULT_ROWS} แถว · ขึ้นจอ {shown.length} ตัว · ล็อค {lockedCount} ตัว (อยู่บนสุดทุกหน้า แถบเหลือง) ที่เหลือเปลี่ยนตามหน้าทีละ {RESULT_ROWS - lockedCount} แถว
         </span>
+        {page.pageCount > 1 && (
+          <>
+            <Switch on={race.result.auto} label="วนหน้าอัตโนมัติ" testId="result-auto" onToggle={() => updateRace(race.id, (r) => ({ ...r, result: setPageAuto(r, { auto: !r.result.auto }) }))} />
+            <label className="flex items-center justify-between gap-3 text-[13px]" htmlFor="result-sec">
+              <span className="whitespace-nowrap">เปลี่ยนหน้าทุกกี่วินาที</span>
+              <input id="result-sec" className={cx(inputClass, "w-20 text-center")} type="number" min={1} max={600} step={1} value={race.result.seconds}
+                onChange={(e) => { const v = Math.round(+e.target.value); if (v >= 1 && v <= 600) updateRace(race.id, (r) => ({ ...r, result: setPageAuto(r, { seconds: v }) })); }} />
+            </label>
+          </>
+        )}
       </Section>
 
       <Section title="ผลการแข่งขัน">

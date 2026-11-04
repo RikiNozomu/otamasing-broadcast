@@ -9,6 +9,7 @@ import { HOME_BG, useImage } from "../lib/images";
 import { useData } from "../lib/store";
 import { HOME_ROWS, paginate } from "../lib/paging";
 import { cx } from "../lib/cx";
+import { FitText } from "../components/FitText";
 import { Logo } from "../components/Logo";
 import { HighlightBar, useHighlight } from "./Highlight";
 
@@ -51,7 +52,7 @@ export function RaceListScene() {
               <motion.span initial={false} {...hl.cell} className={cx(box, "justify-center bg-scene shadow-[inset_0_0_0_3px_#fff]")}>{x.round}</motion.span>
               <motion.span initial={false} {...hl.ink(false)} className={cx(cell, "justify-center tabular-nums")}><span className="relative">{x.postTime}</span></motion.span>
               <motion.span initial={false} {...hl.ink(false)} className={cell}>
-                <span className="relative">{x.name.toUpperCase()}</span>
+                <FitText className="relative" grow={false}>{x.name.toUpperCase()}</FitText>
                 {x.grade && x.style.show.grade ? (
                   <span className="relative inline-flex h-9 items-center rounded-full px-4 text-[26px] leading-none text-white" style={{ background: GRADE_COLOR[x.grade] }}>{gradeLabel(x, x.style)}</span>
                 ) : null}

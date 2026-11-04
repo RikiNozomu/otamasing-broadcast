@@ -24,7 +24,7 @@ export function Landing() {
         ))}
       </div>
       <div className="relative aspect-video w-full overflow-hidden border border-line bg-black"><Stage><LiveScene /></Stage></div>
-      <p className={hintClass}>ข้อมูลใน OBS แยกจาก Chrome ปกติ ถ้าเตรียมข้อมูลใน Chrome ให้กดส่งออก JSON แล้วนำเข้าใน dock ของ OBS · รูปแบบไฟล์ JSON ดูได้ที่ <a href="https://github.com/RikiNozomu/otamasing-broadcast/blob/main/docs/race-json.md">docs/race-json.md</a></p>
+      <p className={hintClass}>ข้อมูลใน OBS แยกจาก Chrome ปกติ ถ้าเตรียมข้อมูลใน Chrome ให้กดส่งออก JSON แล้วนำเข้าใน dock ของ OBS · ส่งออกจาก dock ใน OBS ใช้ "คัดลอก JSON" (OBS ดาวน์โหลดไฟล์ไม่ได้) แล้ววางในโปรแกรมแก้ข้อความ หรือในช่อง "วาง JSON" · รูปแบบไฟล์ JSON ดูได้ที่ <a href="https://github.com/RikiNozomu/otamasing-broadcast/blob/main/docs/race-json.md">docs/race-json.md</a></p>
     </main>
   );
 }

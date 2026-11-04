@@ -4,8 +4,10 @@
  * At most RESULT_ROWS rows are on screen. Locked horses stay at the top of every page; the other rows
  * fill the remaining rows, page by page.
  * e.g. 17 finishers with 1st–3rd locked: page 1 = 1–3 + 4–10, page 2 = 1–3 + 11–17.
+ * With `result.auto` the pages take turns every `result.seconds`, worked out from the clock.
  */
-import type { Race, Runner } from "./model";
+import { cycleAt, cycleSet, cycleTo, useCycle } from "./cycle";
+import type { Race, ResultView, Runner } from "./model";
 
 export const RESULT_ROWS = 10;
 /** At least one row is left for the horses that change with the page. */
@@ -52,4 +54,28 @@ export function resultPage(race: Pick<Race, "runners" | "result">, page = race.r
   const pageCount = Math.max(1, Math.ceil(rest.length / slots));
   const p = Math.min(Math.max(0, page), pageCount - 1);
   return { rows: [...lockedRows, ...rest.slice(p * slots, (p + 1) * slots)], locked, page: p, pageCount };
+}
+
+type Paged = Pick<Race, "runners" | "result">;
+const pages = (race: Paged) => resultPage(race, 0).pageCount;
+
+/** The page on screen at `now`, taking turns when auto is on. */
+export const shownPage = (race: Paged, now = Date.now()) => cycleAt({ ...race.result, index: race.result.page }, pages(race), now);
+
+/** Show page `i` from now on (auto carries on from it). */
+export function showPage(race: Paged, i: number, now = Date.now()): ResultView {
+  const c = cycleTo({ ...race.result, index: race.result.page }, i, pages(race), now);
+  return { ...race.result, page: c.index, since: c.since };
+}
+
+/** Turn the page turning on or off, or change its speed, staying on the page on screen. */
+export function setPageAuto(race: Paged, patch: Partial<Pick<ResultView, "auto" | "seconds">>, now = Date.now()): ResultView {
+  const { index, auto, seconds, since } = cycleSet({ ...race.result, index: race.result.page }, patch, pages(race), now);
+  return { ...race.result, page: index, auto, seconds, since };
+}
+
+/** The page on screen, re-rendering when auto turns it. */
+export function useResultPage(race: Paged): ResultPage {
+  const i = useCycle({ ...race.result, index: race.result.page }, pages(race));
+  return resultPage(race, Math.max(0, i));
 }
