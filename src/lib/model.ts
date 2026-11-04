@@ -23,6 +23,8 @@ export const CLASSES = {
 } as const;
 export type RaceClass = keyof typeof CLASSES;
 export const SURFACES = ["Turf", "Dirt", "Jump"] as const;
+export const OUTCOMES = ["dnf", "dq"] as const;
+export type Outcome = (typeof OUTCOMES)[number];
 
 const hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "สีต้องเป็น #RRGGBB");
 /** ISO 3166 alpha-2 code ("JP", "GB"...) or "" for no flag. */
@@ -37,8 +39,10 @@ export const RunnerSchema = z.object({
   jockeyCountry: country.default(""),
   fav: z.number().int().min(1).max(MAX_RUNNERS).nullable().default(null),
   scratched: z.boolean().default(false),
-  /** Result: finishing position (null = no result yet, or did not finish), time and margin as written, e.g. "1:56.7", "1¼", "nk". */
+  /** Result: finishing position (null = no result yet), time and margin as written, e.g. "1:56.7", "1¼", "nk". */
   finish: z.number().int().min(1).max(MAX_RUNNERS).nullable().default(null),
+  /** Result for a horse with no position: did not finish or disqualified. (A scratched horse shows as SCR on its own.) */
+  outcome: z.enum(OUTCOMES).nullable().default(null),
   time: z.string().default(""),
   margin: z.string().default(""),
 });

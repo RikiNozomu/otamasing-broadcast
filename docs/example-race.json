@@ -19,7 +19,7 @@
       "runners": [
         { "number": 1, "name": "Morning Gallop", "jockey": "A. Sample", "horseCountry": "JP", "jockeyCountry": "JP", "fav": 3, "finish": 2, "time": "2:24.3", "margin": "1¼" },
         { "number": 2, "name": "Silver Paddock", "jockey": "B. Example", "horseCountry": "GB", "jockeyCountry": "FR", "fav": 1, "finish": 1, "time": "2:24.1" },
-        { "number": 3, "name": "Northern Lantern", "jockey": "C. Rider", "horseCountry": "IE", "jockeyCountry": "IE", "fav": 2, "finish": 4, "time": "2:24.4", "margin": "hd" },
+        { "number": 3, "name": "Northern Lantern", "jockey": "C. Rider", "horseCountry": "IE", "jockeyCountry": "IE", "fav": 2, "outcome": "dnf" },
         { "number": 4, "name": "Checkered Flag", "jockey": "D. Jockey", "horseCountry": "US", "jockeyCountry": "JP", "fav": 5, "scratched": true },
         { "number": 5, "name": "Royal Furlong", "jockey": "E. Saddle", "horseCountry": "JP", "jockeyCountry": "IT", "fav": 4, "finish": 3, "time": "2:24.3", "margin": "nk" }
       ]

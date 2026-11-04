@@ -9,14 +9,14 @@ const HC: Record<number, string> = { 2: "GB", 4: "US", 6: "FR", 9: "AU", 13: "IE
 export const sampleRunner = (i: number): Runner => ({
   number: i + 1, draw: null, name: NAMES[i % NAMES.length], jockey: JOCKEYS[i % 18][0],
   horseCountry: HC[i] ?? "JP", jockeyCountry: JOCKEYS[i % 18][1], fav: FAVS[i] ?? null, scratched: false,
-  finish: null, time: "", margin: "",
+  finish: null, outcome: null, time: "", margin: "",
 });
 
-/** A made-up finish for the 11R sample (horse 6 is scratched): [number, time, margin]. */
+/** A made-up finish for the 11R sample: [number, time, margin]. */
 const RESULT_11: [number, string, string][] = [
   [9, "2:24.1", ""], [3, "2:24.3", "1¼"], [12, "2:24.3", "nk"], [1, "2:24.4", "½"], [7, "2:24.4", "hd"], [15, "2:24.6", "1½"],
   [4, "2:24.6", "nse"], [10, "2:24.9", "2"], [18, "2:25.0", "¾"], [2, "2:25.2", "1"], [11, "2:25.2", "hd"], [14, "2:25.4", "1¼"],
-  [5, "2:25.9", "3"], [16, "2:25.9", "nk"], [8, "2:26.3", "2½"], [13, "2:26.5", "1"], [17, "2:27.3", "5"],
+  [5, "2:25.9", "3"], [16, "2:25.9", "nk"], [8, "2:26.3", "2½"], [13, "2:26.5", "1"],
 ];
 
 const race = (r: Omit<Race, "style" | "highlight" | "runners" | "result"> & { n: number }): Race => {
@@ -31,6 +31,7 @@ export function sampleData(): AppData {
   r11.runners[5].scratched = true;
   r11.highlight = 9;
   RESULT_11.forEach(([no, time, margin], i) => Object.assign(r11.runners[no - 1], { finish: i + 1, time, margin }));
+  r11.runners[16].outcome = "dnf"; // horse 17 pulled up; horse 6 is scratched and shows as SCR
   r10.style.drawScheme = "us";
   r10.style.numberScheme = "us";
   r10.style.show.draw = false;

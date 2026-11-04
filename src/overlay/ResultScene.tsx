@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "motion/react";
 import type { Race, Runner } from "../lib/model";
 import { boxColors, drawOf } from "../lib/colors";
 import { ordinal } from "../lib/labels";
-import { resultPage } from "../lib/results";
+import { resultMark, resultPage } from "../lib/results";
 import { cx } from "../lib/cx";
 import { Flag } from "../components/Flag";
 import { HighlightBar, NAVY } from "./Highlight";
@@ -49,9 +49,10 @@ export function ResultScene({ race, page }: { race: Race; page?: number }) {
 
   const row = (h: Runner, i: number) => {
     const on = locked.has(h.number);
+    const mark = resultMark(h);
     const d = drawOf(S, h.number, h.draw, n);
     return (
-      <motion.div key={h.number} data-no={h.number} data-locked={on ? "" : undefined} layout="position"
+      <motion.div key={h.number} data-no={h.number} data-locked={on ? "" : undefined} data-mark={mark ?? undefined} layout="position"
         initial={{ opacity: 0, x: 90 }}
         animate={{ opacity: 1, x: 0, transition: { duration: 0.32, ease: EASE, delay: 0.25 + i * 0.045 } }}
         exit={{ opacity: 0, x: -90, transition: { duration: 0.25, ease: EASE, delay: i * 0.035 } }}
@@ -59,19 +60,19 @@ export function ResultScene({ race, page }: { race: Race; page?: number }) {
         className="relative grid items-center gap-2 py-1" style={{ height: ROW_H, gridTemplateColumns: cols, marginTop: i === lockedCount && lockedCount > 0 ? LOCK_GAP : 0 }}>
         <HighlightBar on={on} className="inset-y-1" style={{ left: 0, width: pw }} />
         <HighlightBar on={on} className="inset-y-1" style={{ left: textL, width: textW }} />
-        <motion.span data-testid="pos" {...ink(on, 0)} className={cx(solid, "justify-center font-bold")}><span className="relative">{ordinal(h.finish!)}</span></motion.span>
+        <motion.span data-testid="pos" {...ink(on, 0)} className={cx(solid, "justify-center font-bold")}><span className="relative">{mark ?? ordinal(h.finish!)}</span></motion.span>
         <NumberBox colors={boxColors(S.numberScheme, h.number, h.number, n, S, true)} value={h.number} />
         {show.draw && <NumberBox colors={boxColors(S.drawScheme, d, h.number, n, S, false)} value={d} />}
         <motion.span data-testid="horse" {...ink(on, 0)} className={cx(band, "font-bold")}>
           {show.horseFlag && <Flag code={h.horseCountry} className="relative h-[22px] w-[33px]" />}
-          <span className="relative min-w-0 flex-1 overflow-hidden text-ellipsis">{h.name.toUpperCase()}</span>
+          <span className={cx("relative min-w-0 flex-1 overflow-hidden text-ellipsis", mark === "SCR" && "line-through decoration-[3px]")}>{h.name.toUpperCase()}</span>
         </motion.span>
         <motion.span data-testid="jockey" {...ink(on, 0.45)} className={cx(band, "font-medium")}>
           {show.jockeyFlag && <Flag code={h.jockeyCountry} className="relative h-[22px] w-[33px]" />}
           <span className="relative min-w-0 flex-1 overflow-hidden text-ellipsis">{h.jockey.toUpperCase()}</span>
         </motion.span>
-        <motion.span data-testid="time" {...ink(on, 0.75)} className={cx(solid, "justify-center font-semibold")}><span className="relative">{h.time}</span></motion.span>
-        <motion.span data-testid="margin" {...ink(on, 0.9)} className={cx(solid, "justify-center font-semibold")}><span className="relative">{h.margin}</span></motion.span>
+        <motion.span data-testid="time" {...ink(on, 0.75)} className={cx(solid, "justify-center font-semibold")}><span className="relative">{mark ? "" : h.time}</span></motion.span>
+        <motion.span data-testid="margin" {...ink(on, 0.9)} className={cx(solid, "justify-center font-semibold")}><span className="relative">{mark ? "" : h.margin}</span></motion.span>
       </motion.div>
     );
   };

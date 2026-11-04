@@ -43,7 +43,7 @@ export function getData(): AppData {
   // data saved before results existed
   for (const r of data.races) {
     r.result ??= { page: 0, locked: [] };
-    for (const h of r.runners) { h.finish ??= null; h.time ??= ""; h.margin ??= ""; }
+    for (const h of r.runners) { h.finish ??= null; h.outcome ??= null; h.time ??= ""; h.margin ??= ""; }
   }
   cache = data;
   return cache;

@@ -143,7 +143,7 @@ export function EditTab({ editing, setEditing }: { editing: string | null; setEd
               ))}
             </div>
             <div className="flex flex-wrap gap-1.5">
-              <Button disabled={n >= MAX_RUNNERS} onClick={() => updateRace(race.id, (r) => ({ ...r, runners: [...r.runners, { number: Math.max(...r.runners.map((x) => x.number)) + 1, draw: null, name: "", jockey: "", horseCountry: "", jockeyCountry: "", fav: null, scratched: false, finish: null, time: "", margin: "" }] }))}>+ เพิ่มม้า</Button>
+              <Button disabled={n >= MAX_RUNNERS} onClick={() => updateRace(race.id, (r) => ({ ...r, runners: [...r.runners, { number: Math.max(...r.runners.map((x) => x.number)) + 1, draw: null, name: "", jockey: "", horseCountry: "", jockeyCountry: "", fav: null, scratched: false, finish: null, outcome: null, time: "", margin: "" }] }))}>+ เพิ่มม้า</Button>
               <Button disabled={n <= MIN_RUNNERS} onClick={() => updateRace(race.id, (r) => { const runners = r.runners.slice(0, -1); return { ...r, runners, highlight: runners.some((x) => x.number === r.highlight) ? r.highlight : null }; })}>− ลบตัวท้าย</Button>
             </div>
           </Section>

@@ -143,12 +143,16 @@ test("result page: 10 rows a page, locked horses stay on top with the yellow bar
   for (const no of [9, 3, 12]) await dock.getByLabel(`ล็อคเบอร์ ${no}`).click();
   await expect(live.locator("[data-locked] [data-testid=highlight-bar]")).toHaveCount(6); // two bars per locked row
   await dock.locator("[data-page='2']").click();
-  await expect(live.locator("[data-testid=pos]")).toHaveText(["1st", "2nd", "3rd", "11th", "12th", "13th", "14th", "15th", "16th", "17th"]);
+  await expect(live.locator("[data-testid=pos]")).toHaveText(["1st", "2nd", "3rd", "11th", "12th", "13th", "14th", "15th", "16th", "DNF"]);
   await expect(live.locator("[data-locked]")).toHaveCount(3);
+  await expect(live.locator("[data-no='17'] [data-testid=time]")).toHaveText("");
 
   // a new position from the dock reaches the screen; unlocking puts the horse back in the paged rows
   await dock.getByLabel("ล็อคเบอร์ 12").click();
-  await expect(live.locator("[data-testid=pos]")).toHaveText(["1st", "2nd", "11th", "12th", "13th", "14th", "15th", "16th", "17th"]);
+  await expect(live.locator("[data-testid=pos]")).toHaveText(["1st", "2nd", "11th", "12th", "13th", "14th", "15th", "16th", "DNF", "SCR"]);
+  // a disqualified horse leaves the finishers and goes after DNF
+  await dock.getByLabel("สถานะเบอร์ 11").selectOption("dq");
+  await expect(live.locator("[data-testid=pos]")).toHaveText(["1st", "2nd", "12th", "13th", "14th", "15th", "16th", "DNF", "DQ", "SCR"]);
   await dock.getByLabel("เวลาเบอร์ 9").fill("2:23.9");
   await expect(live.locator("[data-no='9'] [data-testid=time]")).toHaveText("2:23.9");
 });

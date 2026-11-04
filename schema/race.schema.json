@@ -320,6 +320,21 @@
                       ],
                       "default": null
                     },
+                    "outcome": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "dnf",
+                            "dq"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "default": null
+                    },
                     "time": {
                       "type": "string",
                       "default": ""
