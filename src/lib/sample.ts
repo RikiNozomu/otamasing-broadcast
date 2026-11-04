@@ -35,7 +35,7 @@ export function sampleData(): AppData {
   r10.style.drawScheme = "us";
   r10.style.numberScheme = "us";
   r10.style.show.draw = false;
-  return { version: 1, races: [r10, r11, r12], active: r11.id, transition: "wipe", home: { title: "Tokyo Races", subtitle: "2026.11.29", highlight: null }, images: {} };
+  return { version: 1, races: [r10, r11, r12], active: r11.id, transition: "wipe", home: { title: "Tokyo Races", subtitle: "2026.11.29", highlight: null, page: 0 }, images: {} };
 }
 
 export { HOME };

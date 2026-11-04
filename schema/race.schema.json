@@ -452,6 +452,11 @@
                 "null"
               ],
               "default": null
+            },
+            "page": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
             }
           },
           "additionalProperties": false

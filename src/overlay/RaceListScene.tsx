@@ -1,23 +1,29 @@
-/** The home scene ("หน้าแรก"): every race in dock order, title + subtitle, optional background, one race highlighted. */
-import { motion } from "motion/react";
+/**
+ * The home scene ("หน้าแรก"): the races in dock order, HOME_ROWS a page, title + subtitle, optional background,
+ * one race highlighted. On a page change the rows slide out to the left one after another and the next ones slide in.
+ */
+import { AnimatePresence, motion } from "motion/react";
 import { GRADE_COLOR } from "../lib/colors";
 import { gradeLabel } from "../lib/labels";
 import { HOME_BG, useImage } from "../lib/images";
 import { useData } from "../lib/store";
+import { HOME_ROWS, paginate } from "../lib/paging";
 import { cx } from "../lib/cx";
 import { Logo } from "../components/Logo";
 import { HighlightBar, useHighlight } from "./Highlight";
 
 const box = "flex items-center gap-[18px] overflow-hidden whitespace-nowrap px-[22px] font-display text-[40px] font-bold text-white";
 const cell = cx(box, "bg-[linear-gradient(90deg,var(--color-band)_85%,rgb(44_48_96/.5))]");
+const EASE = [0.65, 0, 0.35, 1] as const;
+const ROW_H = 78;
 
 export function RaceListScene() {
   const d = useData();
   const bg = useImage(HOME_BG, d.images[HOME_BG]);
-  const races = d.races;
-  const rowH = races.length <= 8 ? 78 : Math.max(44, Math.floor((1080 - 330) / races.length) - 14);
-  const roundW = Math.max(110, ...races.map((x) => 44 + 24 * x.round.length));
-  const cur = d.home.highlight && races.some((r) => r.id === d.home.highlight) ? d.home.highlight : null;
+  const { rows: races } = paginate(d.races, HOME_ROWS, d.home.page);
+  // the round column fits the longest round of ALL races, so it doesn't change width between pages
+  const roundW = Math.max(110, ...d.races.map((x) => 44 + 24 * x.round.length));
+  const cur = d.home.highlight && d.races.some((r) => r.id === d.home.highlight) ? d.home.highlight : null;
   const highlightOf = useHighlight(cur);
   return (
     <div className="absolute inset-0 bg-scene" data-testid="race-list">
@@ -31,12 +37,16 @@ export function RaceListScene() {
         <div data-testid="home-subtitle" className="font-display text-[34px] leading-[normal] font-semibold tracking-[.06em] text-home-date">{d.home.subtitle}</div>
         <div data-testid="home-title" className="font-display text-[110px] leading-none font-bold uppercase">{d.home.title}</div>
       </div>
-      <div className="absolute inset-x-20 top-[290px] grid gap-3.5">
-        {races.map((x) => {
+      <div className="absolute inset-x-20 top-[290px] grid content-start gap-3.5" data-testid="race-list-rows">
+        <AnimatePresence initial={false} mode="popLayout">
+        {races.map((x, i) => {
           const hl = highlightOf(x.id);
           return (
-            <div key={x.id} data-testid="race-list-row" data-race={x.id} data-hl={hl.state} className="relative grid gap-2.5"
-              style={{ height: rowH, gridTemplateColumns: `${roundW}px 150px minmax(0,1fr) 330px` }}>
+            <motion.div key={x.id} data-testid="race-list-row" data-race={x.id} data-hl={hl.state} className="relative grid gap-2.5"
+              initial={{ opacity: 0, x: 90 }}
+              animate={{ opacity: 1, x: 0, transition: { duration: 0.32, ease: EASE, delay: 0.25 + i * 0.05 } }}
+              exit={{ opacity: 0, x: -90, transition: { duration: 0.25, ease: EASE, delay: i * 0.04 } }}
+              style={{ height: ROW_H, gridTemplateColumns: `${roundW}px 150px minmax(0,1fr) 330px` }}>
               <HighlightBar on={hl.on} className="inset-y-0 right-0" style={{ left: roundW + 10 }} />
               <motion.span initial={false} {...hl.cell} className={cx(box, "justify-center bg-scene shadow-[inset_0_0_0_3px_#fff]")}>{x.round}</motion.span>
               <motion.span initial={false} {...hl.ink(false)} className={cx(cell, "justify-center tabular-nums")}><span className="relative">{x.postTime}</span></motion.span>
@@ -49,9 +59,10 @@ export function RaceListScene() {
               <motion.span initial={false} {...hl.ink(true)} className={cx(cell, "justify-end text-[34px] font-semibold uppercase")}>
                 <span className="relative">{[x.surface, x.distanceM ? x.distanceM + "m" : ""].filter(Boolean).join(" ")}</span>
               </motion.span>
-            </div>
+            </motion.div>
           );
         })}
+        </AnimatePresence>
       </div>
     </div>
   );

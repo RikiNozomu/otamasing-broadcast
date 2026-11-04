@@ -206,3 +206,20 @@ test("pictures: separate sets for the racecard and the result page, step by hand
   await dock.getByRole("button", { name: "ลบรูปที่ 1" }).click();
   await expect(overlay.locator("[data-layer][data-active] [data-testid=photo]")).toHaveCount(0);
 });
+
+test("the home page shows 8 races a page; the dock turns the page", async ({ context }) => {
+  const { dock, overlay } = await open(context);
+  const races = Array.from({ length: 10 }, (_, i) => ({ date: "2026-12-06", course: "Kyoto", round: `${i + 1}R`, name: `Race ${i + 1}`, runners: [{ number: 1 }, { number: 2 }] }));
+  await dock.getByTestId("import-file").setInputFiles({ name: "day.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ races })) });
+  await dock.getByRole("button", { name: "เพิ่มต่อ" }).click();
+  await dock.getByRole("button", { name: "ตั้งหน้าแรกเป็น Active" }).click();
+  const rows = overlay.locator("[data-layer][data-active] [data-testid=race-list-row]");
+  await expect(rows).toHaveCount(8);
+  await dock.getByTestId("quick-home-pages").getByRole("button", { name: /2$/ }).click();
+  await expect(rows).toHaveCount(5); // 13 races: 8 + 5
+  await expect(rows.first()).toHaveAttribute("data-race", /.+/);
+  // highlighting a race on page 1 turns back to page 1
+  await dock.locator("[data-lh='sample-11']").click();
+  await expect(rows).toHaveCount(8);
+  await expect(overlay.locator("[data-layer][data-active] [data-testid=race-list-row][data-hl=on]")).toHaveAttribute("data-race", "sample-11");
+});
