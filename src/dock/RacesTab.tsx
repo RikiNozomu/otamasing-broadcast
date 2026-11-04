@@ -1,25 +1,46 @@
 /** Tab "รายการแข่งขัน": pick Active (home or a race), import/export, order, delete, home page settings, URL. */
-import { useRef, useState } from "react";
-import { exportFile, HOME, mergeImport, newId, newStyle, parseFile, TRANSITIONS, type AppData, type Transition } from "../lib/model";
+import { AnimatePresence, motion } from "motion/react";
+import { useRef, useState, type ReactNode } from "react";
+import { exportFile, HOME, mergeImport, newId, newStyle, parseFile, TRANSITIONS, type AppData, type ParseResult, type Transition } from "../lib/model";
 import { setData, update, useData, bumpImage } from "../lib/store";
 import { deleteImage, HOME_BG, putImage, raceImageKey } from "../lib/images";
 import { sampleRunner } from "../lib/sample";
+import { downloadJson } from "../lib/download";
+import { cx } from "../lib/cx";
+import { Button, buttonClass } from "../components/Button";
+import { Field, inputClass } from "../components/Field";
+import { Section, hintClass } from "../components/Section";
+import type { Toast } from "./Dock";
 
 const TRANSITION_LABEL: Record<Transition, string> = { wipe: "Wipe (แถบเหลืองกวาดจากซ้าย)", slide: "Slide (เลื่อนเข้าจากขวา)", fade: "Fade (จางเข้า)", none: "ไม่มี (ตัดทันที)" };
-
-export function download(name: string, text: string) {
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}
 const stamp = () => new Date().toISOString().slice(0, 10).replaceAll("-", "");
+const rowGrid = "grid grid-cols-[22px_minmax(0,1fr)_30px] gap-1";
+const sideBtn = "border border-line bg-studio";
 
-export function RacesTab({ onEdit, toast }: { onEdit: (id: string) => void; toast: (msg: string, bad?: boolean) => void }) {
+/** One clickable row: a round tag, title + facts, and on the right the ACTIVE badge (+ extra buttons). */
+function ActiveRow({ id, on, round, title, facts, label, onPick, side, home }: {
+  id: string; on: boolean; round: string; title: string; facts: string; label: string; onPick: () => void; side?: ReactNode; home?: boolean;
+}) {
+  return (
+    <div data-id={id} className={cx("relative grid w-full grid-cols-[minmax(44px,auto)_minmax(0,1fr)_auto] items-center gap-2.5 border bg-studio px-2.5 py-2 text-left", on ? "border-yellow" : "border-line")}>
+      <button type="button" className="absolute inset-0" aria-pressed={on} aria-label={label} onClick={onPick} />
+      <span className={cx("max-w-[110px] truncate bg-navy px-1.5 py-0.5 text-center font-display font-bold", home ? "text-[15px] tracking-[.04em]" : "text-xl")}>{round}</span>
+      <span className="pointer-events-none min-w-0">
+        <b className="block truncate font-display text-lg font-bold uppercase">{title}</b>
+        <small className="text-xs text-ink-muted">{facts}</small>
+      </span>
+      <span className="relative grid justify-items-end gap-1.5">
+        <span className={cx("bg-yellow px-2 py-0.5 text-[11px] font-semibold text-navy", !on && "invisible")}>ACTIVE</span>
+        {side}
+      </span>
+    </div>
+  );
+}
+
+export function RacesTab({ onEdit, toast }: { onEdit: (id: string) => void; toast: Toast }) {
   const d = useData();
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
-  const [pending, setPending] = useState<{ name: string; data: ReturnType<typeof parseFile> & { ok: true } } | null>(null);
+  const [pending, setPending] = useState<{ name: string; data: Extract<ParseResult, { ok: true }>["data"] } | null>(null);
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [over, setOver] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -30,13 +51,12 @@ export function RacesTab({ onEdit, toast }: { onEdit: (id: string) => void; toas
     if (!f) return;
     const res = parseFile(await f.text());
     if (!res.ok) return toast(`นำเข้าไม่ได้: ${res.error}`, true);
-    setPending({ name: f.name, data: res });
+    setPending({ name: f.name, data: res.data });
   };
   const doImport = (mode: "append" | "replace") => {
     if (!pending) return;
-    const next = mergeImport(d, pending.data.data, mode);
-    setData(next);
-    toast(`นำเข้า ${pending.data.data.races.length} รายการแล้ว`);
+    setData(mergeImport(d, pending.data, mode));
+    toast(`นำเข้า ${pending.data.races.length} รายการแล้ว`);
     setPending(null);
   };
   const addRace = () => {
@@ -79,101 +99,105 @@ export function RacesTab({ onEdit, toast }: { onEdit: (id: string) => void; toas
     try { await navigator.clipboard.writeText(overlayUrl); toast("คัดลอก URL แล้ว"); }
     catch { toast("คัดลอกไม่ได้ ให้เลือกข้อความ URL แล้วคัดลอกเอง", true); }
   };
-  const homeOn = d.active === HOME;
 
   return (
-    <div className="pane" role="tabpanel" id="p-races" aria-labelledby="tab-races">
-      <div className="btns">
-        <button className="btn primary" type="button" onClick={() => fileRef.current?.click()}>นำเข้า JSON</button>
+    <div className="grid content-start gap-3 p-3" role="tabpanel" id="p-races" aria-labelledby="tab-races">
+      <div className="flex flex-wrap gap-1.5">
+        <Button variant="primary" onClick={() => fileRef.current?.click()}>นำเข้า JSON</Button>
         <input ref={fileRef} type="file" accept="application/json,.json" hidden data-testid="import-file" onChange={(e) => { pickFile(e.target.files?.[0]); e.target.value = ""; }} />
-        <button className="btn" type="button" onClick={() => download(`otamasing-broadcast-${stamp()}.json`, JSON.stringify(exportFile(d), null, 2))}>ส่งออก</button>
-        <button className="btn" type="button" onClick={addRace}>+ เพิ่มเอง</button>
+        <Button onClick={() => downloadJson(`otamasing-broadcast-${stamp()}.json`, JSON.stringify(exportFile(d), null, 2))}>ส่งออก</Button>
+        <Button onClick={addRace}>+ เพิ่มเอง</Button>
       </div>
-      {pending && (
-        <div className="confirm ok" role="alertdialog" aria-label="ยืนยันการนำเข้า">
-          <span>{pending.name}: {pending.data.data.races.length} รายการ</span>
-          <span className="btns">
-            <button type="button" className="btn primary" onClick={() => doImport("append")}>เพิ่มต่อ</button>
-            <button type="button" className="btn" onClick={() => doImport("replace")}>แทนที่ทั้งหมด</button>
-            <button type="button" className="btn" onClick={() => setPending(null)}>ยกเลิก</button>
-          </span>
-        </div>
-      )}
-      <div className="list" data-testid="race-list">
-        <div className="hrow">
-          <span />
-          <div className={"rc home" + (homeOn ? " on" : "")} data-id={HOME} onClick={() => setActive(HOME)}>
-            <button type="button" className="pick" aria-pressed={homeOn} aria-label="ตั้งหน้าแรกเป็น Active" />
-            <span className="r">HOME</span>
-            <span className="t"><b>หน้าแรก · {d.home.title}</b><small>รายการแข่งขันทั้งหมด {d.races.length} รายการ{d.home.subtitle ? ` · ${d.home.subtitle}` : ""}</small></span>
-            <span className="side"><span className="badge">ACTIVE</span></span>
-          </div>
-          <span />
-        </div>
-        {d.races.map((x, i) => confirmDel === x.id ? (
-          <div className="confirm" key={x.id}>
-            <span>ลบ {x.round} {x.name}? ลบแล้วกู้คืนไม่ได้</span>
-            <span className="btns">
-              <button type="button" className="btn danger" onClick={() => remove(x.id)}>ลบ</button>
-              <button type="button" className="btn" onClick={() => setConfirmDel(null)}>ยกเลิก</button>
+      <AnimatePresence>
+        {pending && (
+          <motion.div role="alertdialog" aria-label="ยืนยันการนำเข้า" className="flex flex-wrap items-center justify-between gap-1.5 overflow-hidden border border-yellow px-2.5 py-2 text-[13px]"
+            initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
+            <span>{pending.name}: {pending.data.races.length} รายการ</span>
+            <span className="flex flex-wrap gap-1.5">
+              <Button variant="primary" onClick={() => doImport("append")}>เพิ่มต่อ</Button>
+              <Button onClick={() => doImport("replace")}>แทนที่ทั้งหมด</Button>
+              <Button onClick={() => setPending(null)}>ยกเลิก</Button>
             </span>
-          </div>
-        ) : (
-          <div
-            key={x.id}
-            className={"rrow" + (dragFrom === i ? " drag" : "") + (over === i && dragFrom !== null && dragFrom !== i ? " over" : "")}
-            draggable
-            onDragStart={(e) => { setDragFrom(i); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", String(i)); }}
-            onDragOver={(e) => { if (dragFrom === null) return; e.preventDefault(); setOver(i); }}
-            onDrop={(e) => { e.preventDefault(); if (dragFrom !== null) move(dragFrom, i); setDragFrom(null); setOver(null); }}
-            onDragEnd={() => { setDragFrom(null); setOver(null); }}
-          >
-            <span className="handle" aria-hidden="true">⠿</span>
-            <div className={"rc" + (x.id === d.active ? " on" : "")} data-id={x.id} onClick={(e) => { if (!(e.target as HTMLElement).closest(".ebtn")) setActive(x.id); }}>
-              <button type="button" className="pick" aria-pressed={x.id === d.active} aria-label={`ตั้ง ${x.round} ${x.name} เป็น Active`} />
-              <span className="r">{x.round || "–"}</span>
-              <span className="t"><b>{x.name}</b><small>{[x.date.replaceAll("-", "."), x.course, `${x.surface}${x.distanceM ? ` ${x.distanceM}m` : ""}`, `${x.runners.length} ตัว`].filter(Boolean).join(" · ")}</small></span>
-              <span className="side"><span className="badge">ACTIVE</span><button type="button" className="btn ebtn" onClick={() => onEdit(x.id)}>แก้ไข</button></span>
-            </div>
-            <span className="moves">
-              <button type="button" className="mv" aria-label={`เลื่อน ${x.round} ขึ้น`} disabled={i === 0} onClick={() => move(i, i - 1)}>▲</button>
-              <button type="button" className="del" aria-label={`ลบ ${x.round} ${x.name}`} onClick={() => setConfirmDel(x.id)}>✕</button>
-            </span>
-          </div>
-        ))}
-      </div>
-      <p className="hint">กด "หน้าแรก" หรือรายการไหนก็ได้เพื่อตั้งเป็น Active จอจะเปลี่ยนพร้อมทรานซิชัน · ลาก ⠿ (หรือกด ▲) เพื่อเรียงลำดับ หน้าแรกเรียงตามนี้ · ข้อมูลเก็บในเครื่องนี้ ย้ายเครื่องใช้ส่งออก/นำเข้า JSON</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="group">
-        <label htmlFor="trans"><b>ทรานซิชันตอนเปลี่ยน Active</b></label>
-        <select id="trans" value={d.transition} onChange={(e) => update((x) => ({ ...x, transition: e.target.value as Transition }))}>
+      <div className="grid gap-1.5" data-testid="race-list">
+        <div className={rowGrid}>
+          <span />
+          <ActiveRow id={HOME} home on={d.active === HOME} round="HOME" title={`หน้าแรก · ${d.home.title}`} label="ตั้งหน้าแรกเป็น Active" onPick={() => setActive(HOME)}
+            facts={`รายการแข่งขันทั้งหมด ${d.races.length} รายการ${d.home.subtitle ? ` · ${d.home.subtitle}` : ""}`} />
+          <span />
+        </div>
+        {d.races.map((x, i) => {
+          const name = `${x.round} ${x.name}`.trim();
+          return confirmDel === x.id ? (
+            <motion.div layout key={x.id} className="flex items-center justify-between gap-1.5 border border-danger-ink px-2.5 py-2 text-[13px]">
+              <span>ลบ {name}? ลบแล้วกู้คืนไม่ได้</span>
+              <span className="flex flex-wrap gap-1.5">
+                <Button variant="danger" onClick={() => remove(x.id)}>ลบ</Button>
+                <Button onClick={() => setConfirmDel(null)}>ยกเลิก</Button>
+              </span>
+            </motion.div>
+          ) : (
+            // motion only animates the reorder; the drag and drop itself is native HTML5 on the inner div
+            <motion.div layout="position" transition={{ duration: 0.2 }} key={x.id}>
+            <div data-testid="race-row"
+              className={cx(rowGrid, "items-stretch", dragFrom === i && "opacity-40", over === i && dragFrom !== null && dragFrom !== i && "shadow-[0_-3px_0_var(--color-yellow)]")}
+              draggable
+              onDragStart={(e) => { setDragFrom(i); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", String(i)); }}
+              onDragOver={(e) => { if (dragFrom === null) return; e.preventDefault(); setOver(i); }}
+              onDrop={(e) => { e.preventDefault(); if (dragFrom !== null) move(dragFrom, i); setDragFrom(null); setOver(null); }}
+              onDragEnd={() => { setDragFrom(null); setOver(null); }}>
+              <span className="grid cursor-grab place-items-center text-base text-ink-muted select-none" aria-hidden="true">⠿</span>
+              <ActiveRow id={x.id} on={x.id === d.active} round={x.round || "–"} title={x.name} label={`ตั้ง ${name} เป็น Active`} onPick={() => setActive(x.id)}
+                facts={[x.date.replaceAll("-", "."), x.course, `${x.surface}${x.distanceM ? ` ${x.distanceM}m` : ""}`, `${x.runners.length} ตัว`].filter(Boolean).join(" · ")}
+                side={<Button className="px-3 py-[3px] text-xs" aria-label={`แก้ไข ${name}`} onClick={() => onEdit(x.id)}>แก้ไข</Button>} />
+              <span className="grid grid-rows-[auto_1fr] gap-1">
+                <button type="button" className={cx(sideBtn, "py-0.5 text-[11px] text-ink-muted disabled:opacity-30")} aria-label={`เลื่อน ${x.round} ขึ้น`} disabled={i === 0} onClick={() => move(i, i - 1)}>▲</button>
+                <button type="button" className={cx(sideBtn, "text-danger-ink")} aria-label={`ลบ ${name}`} onClick={() => setConfirmDel(x.id)}>✕</button>
+              </span>
+            </div>
+            </motion.div>
+          );
+        })}
+      </div>
+      <p className={hintClass}>กด "หน้าแรก" หรือรายการไหนก็ได้เพื่อตั้งเป็น Active จอจะเปลี่ยนพร้อมทรานซิชัน · ลาก ⠿ (หรือกด ▲) เพื่อเรียงลำดับ หน้าแรกเรียงตามนี้ · ข้อมูลเก็บในเครื่องนี้ ย้ายเครื่องใช้ส่งออก/นำเข้า JSON</p>
+
+      <Section title={<label htmlFor="trans">ทรานซิชันตอนเปลี่ยน Active</label>}>
+        <select id="trans" className={inputClass} value={d.transition} onChange={(e) => update((x) => ({ ...x, transition: e.target.value as Transition }))}>
           {TRANSITIONS.map((t) => <option key={t} value={t}>{TRANSITION_LABEL[t]}</option>)}
         </select>
-      </div>
+      </Section>
 
-      <div className="group">
-        <b>หน้าแรก (รายการแข่งขัน)</b>
-        <div className="field"><label htmlFor="l-title">Title</label><input className="tx" id="l-title" value={d.home.title} onChange={(e) => update((x) => ({ ...x, home: { ...x.home, title: e.target.value } }))} /></div>
-        <div className="field"><label htmlFor="l-sub">Sub title (วันที่)</label><input className="tx" id="l-sub" value={d.home.subtitle} onChange={(e) => update((x) => ({ ...x, home: { ...x.home, subtitle: e.target.value } }))} /></div>
-        <div className="btns">
-          <label className="btn primary" htmlFor="l-bg">เลือก BG…</label>
+      <Section title="หน้าแรก (รายการแข่งขัน)">
+        <Field id="l-title" label="Title"><input className={inputClass} id="l-title" value={d.home.title} onChange={(e) => update((x) => ({ ...x, home: { ...x.home, title: e.target.value } }))} /></Field>
+        <Field id="l-sub" label="Sub title (วันที่)"><input className={inputClass} id="l-sub" value={d.home.subtitle} onChange={(e) => update((x) => ({ ...x, home: { ...x.home, subtitle: e.target.value } }))} /></Field>
+        <div className="flex flex-wrap gap-1.5">
+          <label className={buttonClass("primary")} htmlFor="l-bg">เลือก BG…</label>
           <input type="file" id="l-bg" accept="image/*" hidden onChange={(e) => { setBg(e.target.files?.[0]); e.target.value = ""; }} />
-          {d.images[HOME_BG] ? <button className="btn" type="button" onClick={clearBg}>ไม่ใช้รูป</button> : null}
+          {d.images[HOME_BG] ? <Button onClick={clearBg}>ไม่ใช้รูป</Button> : null}
         </div>
-        <span className="hint">ไฮไลต์รายการบนหน้าแรก (แยกจาก Active, กดซ้ำเพื่อเอาออก)</span>
-        <div className="lgrid">
-          {d.races.map((x) => (
-            <button key={x.id} type="button" className="hb" data-lh={x.id} aria-pressed={d.home.highlight === x.id} title={x.name}
-              onClick={() => update((y) => ({ ...y, home: { ...y.home, highlight: y.home.highlight === x.id ? null : x.id } }))}>{x.round || x.name}</button>
-          ))}
+        <span className={hintClass}>ไฮไลต์รายการบนหน้าแรก (แยกจาก Active, กดซ้ำเพื่อเอาออก)</span>
+        <div className="flex flex-wrap gap-1">
+          {d.races.map((x) => {
+            const on = d.home.highlight === x.id;
+            return (
+              <button key={x.id} type="button" data-lh={x.id} aria-pressed={on} title={x.name}
+                className={cx("max-w-[140px] truncate border-2 px-3 py-[3px] font-display text-[17px] font-bold", on ? "border-yellow bg-yellow text-navy" : "border-white bg-navy text-white")}
+                onClick={() => update((y) => ({ ...y, home: { ...y.home, highlight: y.home.highlight === x.id ? null : x.id } }))}>{x.round || x.name}</button>
+            );
+          })}
         </div>
-      </div>
+      </Section>
 
-      <div className="group">
-        <b>URL สำหรับ Browser Source ใน OBS</b>
-        <div className="url"><code title={overlayUrl}>{overlayUrl}</code><button className="btn" type="button" onClick={copy}>คัดลอก</button></div>
-        <span className="hint">ใส่ Browser Source ตัวเดียว ขนาด 1920×1080</span>
-      </div>
+      <Section title="URL สำหรับ Browser Source ใน OBS">
+        <div className="flex items-center gap-1.5">
+          <code title={overlayUrl} className="min-w-0 flex-1 truncate border border-line bg-panel px-1.5 py-[5px] text-xs text-ink-muted">{overlayUrl}</code>
+          <Button onClick={copy}>คัดลอก</Button>
+        </div>
+        <span className={hintClass}>ใส่ Browser Source ตัวเดียว ขนาด 1920×1080</span>
+      </Section>
     </div>
   );
 }

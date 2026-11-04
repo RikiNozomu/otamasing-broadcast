@@ -1,9 +1,13 @@
 /** The OBS Custom Browser Dock: two tabs, รายการแข่งขัน and แก้ไข. */
+import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { HOME } from "../lib/model";
 import { useData } from "../lib/store";
+import { cx } from "../lib/cx";
 import { EditTab } from "./EditTab";
 import { RacesTab } from "./RacesTab";
+
+export type Toast = (msg: string, bad?: boolean) => void;
 
 export function Dock() {
   const d = useData();
@@ -11,26 +15,41 @@ export function Dock() {
   const [editing, setEditing] = useState<string | null>(d.active !== HOME ? d.active : d.races[0]?.id ?? null);
   const [toastMsg, setToast] = useState<{ msg: string; bad: boolean } | null>(null);
   const timer = useRef<number | undefined>(undefined);
-  const toast = useCallback((msg: string, bad = false) => {
+  const toast = useCallback<Toast>((msg, bad = false) => {
     setToast({ msg, bad });
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setToast(null), bad ? 6000 : 2500);
   }, []);
-  useEffect(() => { document.body.classList.add("is-dock"); document.title = "โอตะม้าซิ่ง Broadcast · Dock"; }, []);
+  useEffect(() => { document.body.classList.add("bg-panel"); document.title = "โอตะม้าซิ่ง Broadcast · Dock"; }, []);
   const active = d.races.find((r) => r.id === d.active);
   const tabs = [["races", "รายการแข่งขัน"], ["edit", "แก้ไข"]] as const;
   return (
-    <div className="dock">
-      <div className="dock-title"><span>โอตะม้าซิ่ง Broadcast</span><span data-testid="active-tag">Active: {active ? active.round || active.name : "หน้าแรก"}</span></div>
-      <div className="tabs" role="tablist">
+    <div className="grid min-h-screen grid-rows-[auto_auto_1fr] bg-panel">
+      <div className="flex items-center justify-between bg-navy px-3.5 py-2.5 font-display text-[15px] font-bold tracking-[.06em] uppercase">
+        <span>โอตะม้าซิ่ง Broadcast</span>
+        <span data-testid="active-tag">Active: {active ? active.round || active.name : "หน้าแรก"}</span>
+      </div>
+      <div className="grid grid-cols-2 border-b border-line" role="tablist">
         {tabs.map(([k, label]) => (
-          <button key={k} type="button" role="tab" id={`tab-${k}`} aria-selected={tab === k} aria-controls={`p-${k}`} onClick={() => setTab(k)}>{label}</button>
+          <button key={k} type="button" role="tab" id={`tab-${k}`} aria-selected={tab === k} aria-controls={`p-${k}`} onClick={() => setTab(k)}
+            className={cx("relative px-1 py-2.5 text-sm font-medium", tab === k ? "text-ink" : "text-ink-muted")}>
+            {label}
+            {tab === k && <motion.span layoutId="dock-tab" className="absolute inset-x-0 -bottom-px h-[3px] bg-yellow" transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
+          </button>
         ))}
       </div>
       {tab === "races"
         ? <RacesTab toast={toast} onEdit={(id) => { setEditing(id); setTab("edit"); }} />
         : <EditTab editing={editing} setEditing={setEditing} />}
-      {toastMsg && <div className={"toast" + (toastMsg.bad ? " bad" : "")} role={toastMsg.bad ? "alert" : "status"}>{toastMsg.msg}</div>}
+      <AnimatePresence>
+        {toastMsg && (
+          <motion.div key="toast" role={toastMsg.bad ? "alert" : "status"}
+            className={cx("fixed inset-x-3 bottom-3 z-60 border px-3 py-2.5 text-[13px] shadow-[0_8px_24px_rgb(0_0_0/.5)]", toastMsg.bad ? "border-danger-ink bg-danger-bg" : "border-ok bg-ok-bg")}
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} transition={{ duration: 0.2 }}>
+            {toastMsg.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

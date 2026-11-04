@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { bracket, boxColors, gradeLabel, JRA, ordinal, US } from "../../src/lib/colors";
+import { bracket, boxColors, JRA, US } from "../../src/lib/colors";
+import { gradeLabel, ordinal } from "../../src/lib/labels";
 import { newStyle } from "../../src/lib/model";
 
 const sizes = (n: number) => {

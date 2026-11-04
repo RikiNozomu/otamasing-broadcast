@@ -1,5 +1,5 @@
-/** Number/draw colour schemes, the JRA bracket rule, grade labels and the nation list. */
-import type { Race, Scheme, Style } from "./model";
+/** Number/draw colour schemes, the JRA bracket rule, and the grade and Fav pill colours. */
+import type { Scheme, Style } from "./model";
 
 export type Pair = readonly [bg: string, fg: string];
 
@@ -55,23 +55,4 @@ export function boxColors(scheme: Scheme, value: number, horseNo: number, n: num
 export const drawOf = (s: Style, number: number, draw: number | null, n: number) => (s.autoDraw ? bracket(number, n) : draw ?? number);
 
 export const GRADE_COLOR: Record<string, string> = { G1: "#E23B24", G2: "#0E1478", G3: "#4DB437", L: "#F2BD34" };
-export function gradeLabel(r: Pick<Race, "grade" | "jump">, s: Pick<Style, "gradeStyle">): string {
-  if (!r.grade) return "";
-  const roman = { G1: "GI", G2: "GII", G3: "GIII", L: "LR" }, intl = { G1: "G1", G2: "G2", G3: "G3", L: "L" };
-  return (r.jump ? "J-" : "") + (s.gradeStyle === "jra" ? roman : intl)[r.grade];
-}
-
 export const favColor = (n: number) => (n === 1 ? "#F2BE34" : n === 2 ? "#7EA3C6" : n === 3 ? "#C0907E" : "#BDBDBD");
-export const ordinal = (n: number) => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
-
-/** The 23 nations of the Figma "flag" component, same order; [ISO code, racing code, Thai name]. */
-export const NATIONS: readonly (readonly [string, string, string])[] = [
-  ["JP", "JPN", "ญี่ปุ่น"], ["AR", "ARG", "อาร์เจนตินา"], ["IT", "ITA", "อิตาลี"], ["BE", "BEL", "เบลเยียม"],
-  ["US", "USA", "สหรัฐอเมริกา"], ["HK", "HKG", "ฮ่องกง"], ["PR", "PUR", "เปอร์โตริโก"], ["BB", "BRB", "บาร์เบโดส"],
-  ["IE", "IRE", "ไอร์แลนด์"], ["DE", "GER", "เยอรมนี"], ["PA", "PAN", "ปานามา"], ["GB", "GBR", "สหราชอาณาจักร"],
-  ["FR", "FRA", "ฝรั่งเศส"], ["VE", "VEN", "เวเนซุเอลา"], ["AU", "AUS", "ออสเตรเลีย"], ["NZ", "NZL", "นิวซีแลนด์"],
-  ["DO", "DOM", "โดมินิกัน"], ["CA", "CAN", "แคนาดา"], ["AE", "UAE", "สหรัฐอาหรับเอมิเรตส์"], ["MX", "MEX", "เม็กซิโก"],
-  ["ZA", "RSA", "แอฟริกาใต้"], ["CL", "CHI", "ชิลี"], ["PE", "PER", "เปรู"],
-];
-export const nationName = (c: string) => (c ? NATIONS.find((n) => n[0] === c)?.[2] ?? c : "ไม่ใส่ธง");
-export const nationCode = (c: string) => NATIONS.find((n) => n[0] === c)?.[1] ?? c;

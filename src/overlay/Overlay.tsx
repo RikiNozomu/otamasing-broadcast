@@ -1,11 +1,15 @@
-/** The one OBS Browser Source (1920x1080): shows whatever is Active in the dock. */
+/** The one OBS Browser Source (1920x1080): shows whatever is Active in the dock, on a transparent page. */
 import { useEffect } from "react";
-import { LiveScene, Stage } from "./Stage";
+import { LiveScene } from "./LiveScene";
+import { Stage } from "./Stage";
 
 export function Overlay() {
-  useEffect(() => { document.body.classList.add("is-overlay"); document.title = "โอตะม้าซิ่ง Broadcast · Overlay"; }, []);
+  useEffect(() => {
+    document.body.classList.add("overflow-hidden", "bg-transparent");
+    document.title = "โอตะม้าซิ่ง Broadcast · Overlay";
+  }, []);
   return (
-    <div className="overlay-root">
+    <div className="fixed inset-0 overflow-hidden">
       <Stage><LiveScene /></Stage>
     </div>
   );

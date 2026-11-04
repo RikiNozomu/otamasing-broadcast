@@ -25,6 +25,15 @@ npm run test:e2e     # Playwright เปิด dock + overlay พร้อมก
 npm run schema       # สร้าง schema/race.schema.json ใหม่จาก src/lib/model.ts
 ```
 
+Stack: Vite + React + TypeScript, [Tailwind CSS v4](https://tailwindcss.com) (สีและฟอนต์จาก design system อยู่ใน `@theme` ของ `src/styles/app.css` ไม่มี palette ตั้งต้นของ Tailwind) และ [Motion](https://motion.dev) สำหรับทรานซิชันและไฮไลต์
+
+| โฟลเดอร์ | มีอะไร |
+| --- | --- |
+| `src/overlay/` | หน้าจอออกอากาศ: `LiveScene` (Active + ทรานซิชัน), `RacecardScene` (การ์ดรายชื่อม้า), `RaceListScene` (หน้าแรก), `Highlight` (แถบไฮไลต์), `Stage` (ย่อขยาย 1920×1080) |
+| `src/dock/` | Dock: `RacesTab`, `EditTab`, `FlagPicker` |
+| `src/components/` | ใช้ร่วมกันทั้งสองฝั่ง: `Logo`, `Flag`, `Button`, `Switch`, `Field`, `Section` |
+| `src/lib/` | ข้อมูลและกฎ: `model` (schema), `store`, `images`, `colors` (สีซอง/เบอร์), `labels` (ป้ายเกรด, Fav), `nations`, `flags` |
+
 ทุก PR รัน CI (typecheck, Vitest, Playwright) และ merge เข้า `main` แล้ว deploy ขึ้น GitHub Pages ให้เอง
 
 ฟอนต์ Otamasing Display / Otamasing Sans (OFL) อยู่ใน `public/fonts` ธงจาก [flag-icons](https://github.com/lipis/flag-icons) (MIT)
